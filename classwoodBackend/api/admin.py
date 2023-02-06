@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Accounts,SchoolModel,StaffModel,ClassroomModel
+from .models import Accounts,SchoolModel,StaffModel,ClassroomModel,BlackListedToken
 from django.contrib.admin import ModelAdmin
 
 class SchoolAdmin(ModelAdmin):
@@ -20,4 +20,5 @@ admin.site.register(SchoolModel,SchoolAdmin)
 admin.site.register(StaffModel,StaffAdmin)
 admin.site.register(Accounts,AccountsAdmin)
 admin.site.register(ClassroomModel,ClassroomAdmin)
+admin.site.register(BlackListedToken)
 # Register your models here.

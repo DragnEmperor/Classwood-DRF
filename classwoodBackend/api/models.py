@@ -5,6 +5,9 @@ from uuid import uuid4
 from .manager import CustomUserManager
 from .validators import mobile_regex
 
+def school_logo_upload(instance, filename):
+    ext = filename.split(".")[-1]
+    return f"schools/{instance.user.id}/logo_{uuid4().hex}.{ext}"
 
 def staff_profile_upload(instance, filename):
     ext = filename.split(".")[-1]
@@ -30,6 +33,10 @@ class Accounts(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     objects = CustomUserManager()
+    
+    class Meta:
+        verbose_name = "Account"
+        verbose_name_plural = "Accounts"
 
 class BlackListedToken(models.Model):
     token = models.CharField(max_length=500)
@@ -46,14 +53,14 @@ class SchoolModel(models.Model):
     """
     user = models.OneToOneField(Accounts, on_delete=models.CASCADE,primary_key=True)
     school_name = models.CharField(max_length=100)
-    school_phone = models.CharField(max_length=10)
+    school_phone = models.CharField(validators=[mobile_regex], max_length=13)
     school_address = models.CharField(max_length=100)
     school_city = models.CharField(max_length=100)
     school_state = models.CharField(max_length=100)
     school_zipcode = models.CharField(max_length=100)
-    school_logo = models.ImageField(upload_to='school_logo', null=True, blank=True)
-    school_website = models.CharField(max_length=100)
-    school_description = models.CharField(max_length=100,blank=True)
+    school_logo = models.ImageField(upload_to=school_logo_upload, null=True, blank=True)
+    school_website = models.URLField(max_length=200,null=True)
+    date_of_establishment = models.DateField(null=True)
 
     def __str__(self):
         return self.school_name
@@ -75,6 +82,7 @@ class StaffModel(models.Model):
     gender = models.CharField(max_length=1, choices=GENDER_CHOICE)
     mobile_number = models.CharField(validators=[mobile_regex], max_length=13)
     contact_email = models.EmailField(null=True, blank=True)
+    is_class_teacher = models.BooleanField(default=False)
 
     # School Information
     date_of_joining = models.DateField()
@@ -108,6 +116,7 @@ class ClassroomModel(models.Model):
 
     class Meta:
         ordering = ["class_name","section_name"]
+        unique_together = ("class_name", "section_name", "school")
 
     @property
     def strength(self):
@@ -167,13 +176,14 @@ class Subject(models.Model):
     name = models.CharField(max_length=50)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
     created_at = models.DateTimeField(null=True, auto_now_add=True)
-    classroom = models.ManyToManyField(ClassroomModel, related_name="class_map")
     subject_pic = models.ImageField(upload_to=subject_profile_upload, blank=True)
+    teacher = models.ManyToManyField(StaffModel,related_name="taught_by")
+    classroom = models.ForeignKey(ClassroomModel, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "Subject"
         verbose_name_plural = "Subjects"
-        unique_together = ("name", "school")
+        unique_together = ("name","classroom")
         ordering = ["name"]
 
     def __str__(self):

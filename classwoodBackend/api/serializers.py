@@ -26,16 +26,11 @@ class SchoolSignUpSerializer(serializers.ModelSerializer):
         user_data = validated_data.pop('user')
         return models.SchoolModel.objects.create(user=models.Accounts.objects.create_user(**user_data),**validated_data)
     
-    def update(self, instance, validated_data):
-        """Update and return user."""
-        password = validated_data.pop('password', None)
-        user = super().update(instance, validated_data)
-
-        if password:
-            user.set_password(password)
-            user.save()
-
-        return user
+class SchoolProfileSerializer(serializers.ModelSerializer):
+    user = AccountSerializer()
+    class Meta:
+        model = models.SchoolModel
+        fields = "__all__"
     
 class StaffCreateSerializer(serializers.ModelSerializer):
     user = AccountSerializer()
@@ -68,7 +63,14 @@ class ClassroomDetailSerializer(serializers.ModelSerializer):
         model = models.ClassroomModel
         fields = "__all__"
         
-        
+class SubjectCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Subject
+        fields = "__all__" 
+    
+    
+    
+         
 # class AuthTokenSerializer(serializers.Serializer):
 #     """
 #     Serializer for the user authentication object
