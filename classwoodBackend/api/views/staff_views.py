@@ -5,6 +5,8 @@ from ..serializers import StaffProfileSerializer,ClassroomCreateSerializer,Subje
 from ..permissions import AdminPermission,StaffLevelPermission,IsTokenValid
 from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import extend_schema,OpenApiParameter,OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 class StaffSingleView(generics.RetrieveUpdateAPIView):
     serializer_class = StaffProfileSerializer
@@ -46,6 +48,19 @@ class SubjectCreateView(viewsets.ModelViewSet):
     serializer_class = SubjectCreateSerializer
     permission_classes = [IsAuthenticated & (StaffLevelPermission | AdminPermission) & IsTokenValid]
     queryset = Subject.objects.all()
+    
+    @extend_schema(
+        parameters=OpenApiParameter('classroom',OpenApiTypes.UUID),
+        examples = [
+         OpenApiExample(
+            'Valid example 1',
+            summary='short summary',
+            description='longer description',
+            value={
+                'songs': {'top10': True},
+                'single': {'top10': True}
+            },)
+    ],methods=['GET'])
     
     def get_queryset(self):
         get_classroom = self.request.data.get('classroom')

@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model,authenticate
-from ..models import SchoolModel,BlackListedToken
+from ..models import SchoolModel,BlackListedToken,StaffModel,StudentModel
 # from ..serializers import AuthTokenSerializer
 from ..function import create_jwt_pair
 from ..permissions import IsTokenValid
@@ -22,7 +22,14 @@ class LoginView(TokenObtainPairView):
         user = authenticate(email=email,password=password)
         if user is not None:
             tokens = create_jwt_pair(user)
-            response = {"message": "Login Successfull", "tokens": tokens}
+            staff = StaffModel.objects.filter(user=user).exists()
+            user_type = "Student"
+            if staff:
+              user_type = "Staff"
+            schoolAdmin = SchoolModel.objects.filter(user=user).exists()
+            if schoolAdmin:
+              user_type = "School"
+            response = {"message": "Login Successfull", "tokens": tokens,"user_type":user_type}
             return Response(data=response,status=status.HTTP_200_OK)
         else:
             return Response(data={"message": "Invalid email or password"})
@@ -44,6 +51,8 @@ class LogoutView(views.APIView):
         refresh_token = self.request.auth
         blacklistToken = BlackListedToken.objects.create(token=refresh_token,user=self.request.user)
         return Response({"status": "OK, goodbye"})
+
+        
     
     
 
