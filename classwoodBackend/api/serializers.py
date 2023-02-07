@@ -47,6 +47,14 @@ class ClassroomCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.ClassroomModel
         fields = "__all__"
+        
+class AllSubjectSerializer(serializers.ModelSerializer):
+    # Doubt
+    classroom = serializers.StringRelatedField()
+    teacher = serializers.StringRelatedField()
+    class Meta:
+        model = models.Subject
+        fields = "__all__"
     
     
 # Staff Serializers

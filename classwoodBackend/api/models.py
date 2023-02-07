@@ -59,7 +59,7 @@ class SchoolModel(models.Model):
     school_state = models.CharField(max_length=100)
     school_zipcode = models.CharField(max_length=100)
     school_logo = models.ImageField(upload_to=school_logo_upload, null=True, blank=True)
-    school_website = models.URLField(max_length=200,null=True)
+    school_website = models.URLField(max_length=200,null=True,blank=True)
     date_of_establishment = models.DateField(null=True)
 
     def __str__(self):
@@ -172,12 +172,14 @@ class StudentModel(models.Model):
     def __str__(self):
         return self.user.email
 
+# add, if required, code for setting onDelete to models.SET() to class teacher
+
 class Subject(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(max_length=50)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(null=True, auto_now_add=True)
     subject_pic = models.ImageField(upload_to=subject_profile_upload, blank=True)
-    teacher = models.ManyToManyField(StaffModel,related_name="taught_by")
+    teacher = models.ForeignKey(StaffModel, on_delete=models.SET_NULL, related_name="taught_by", null=True)
     classroom = models.ForeignKey(ClassroomModel, on_delete=models.CASCADE)
 
     class Meta:

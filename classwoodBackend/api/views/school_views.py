@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import generics,status,viewsets
+from rest_framework import generics,status,viewsets,serializers
 # Create your views here.
 from .. import serializers
 from rest_framework.response import Response
@@ -7,10 +7,12 @@ from rest_framework.request import Request
 from ..permissions import AdminPermission,StaffLevelPermission,IsTokenValid
 from rest_framework.permissions import IsAuthenticated
 from .. import models
+import json
+from django.core.serializers import serialize
 
 class SchoolSignUpView(generics.CreateAPIView):
     serializer_class = serializers.SchoolSignUpSerializer
-    permission_classes=[]
+    permission_classes = []
     def post(self, request: Request):  
         data = request.data  
         serializer = self.serializer_class(data=data)
@@ -42,7 +44,7 @@ class SchoolProfileView(generics.RetrieveUpdateAPIView):
     
 class StaffView(viewsets.ModelViewSet):
     serializer_class = serializers.StaffCreateSerializer
-    permission_classes=[IsAuthenticated & AdminPermission & IsTokenValid]
+    permission_classes = [IsAuthenticated & AdminPermission & IsTokenValid]
     queryset = models.StaffModel.objects.all()
      
     def get_queryset(self):
@@ -70,7 +72,7 @@ class StaffView(viewsets.ModelViewSet):
     
 class ClassroomSchoolView(viewsets.ModelViewSet):
     serializer_class = serializers.ClassroomCreateSerializer
-    permission_classes=[IsAuthenticated & AdminPermission & IsTokenValid]
+    permission_classes = [IsAuthenticated & AdminPermission & IsTokenValid]
     queryset = models.ClassroomModel.objects.all()
      
     def get_queryset(self):
@@ -80,7 +82,6 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
     
     def create(self,request):
         data = request.data
-        # add proper logic for checking school in response
         user = request.user
         school = models.SchoolModel.objects.get(user=user)
         data['school'] = school
@@ -99,6 +100,17 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
             return Response(data=response,status=status.HTTP_201_CREATED)
         
         return Response(data=serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+    
+class AllSubjectsView(generics.ListAPIView):
+    serializer_class = serializers.AllSubjectSerializer
+    permission_classes=[IsAuthenticated & AdminPermission & IsTokenValid]
+    queryset = models.Subject.objects.all()
+    
+    # Doubt
+    
+    
+        
     
         
     
