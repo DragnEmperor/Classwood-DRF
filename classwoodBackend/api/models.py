@@ -60,7 +60,7 @@ class SchoolModel(models.Model):
     school_zipcode = models.CharField(max_length=100)
     school_logo = models.ImageField(upload_to=school_logo_upload, null=True, blank=True)
     school_website = models.URLField(max_length=200,null=True,blank=True)
-    date_of_establishment = models.DateField(null=True)
+    date_of_establishment = models.DateField(null=True,blank=True)
 
     def __str__(self):
         return self.school_name
