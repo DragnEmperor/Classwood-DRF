@@ -109,13 +109,6 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
         return Response(data=serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     
     
-class AllSubjectsView(generics.ListAPIView):
-    serializer_class = serializers.AllSubjectSerializer
-    permission_classes=[IsAuthenticated & AdminPermission & IsTokenValid]
-    queryset = models.Subject.objects.all()
-    
-    # Doubt
-    
     
         
     

@@ -74,10 +74,10 @@ class ClassroomListSerializer(serializers.ModelSerializer):
         model = models.ClassroomModel
         fields = "__all__"
         
-class AllSubjectSerializer(serializers.ModelSerializer):
-    # Doubt
+class SubjectReadSerializer(serializers.ModelSerializer):
+    # Doubt how to add property without disrupting swagger
     classroom = serializers.StringRelatedField()
-    teacher = serializers.SlugRelatedField(slug_field='full_name',read_only=True)
+    teacher = serializers.SlugRelatedField(slug_field='first_name',read_only=True)
     class Meta:
         model = models.Subject
         fields = "__all__"

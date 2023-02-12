@@ -80,6 +80,11 @@ class SubjectCreateView(viewsets.ModelViewSet):
         subjects = models.Subject.objects.filter(teacher=teacher)
         return subjects
     
+    def get_serializer_class(self):
+        if self.action=='list':
+            return serializers.SubjectReadSerializer
+        return self.serializer_class
+    
     def create(self, request):
         data = request.data
         user = request.user
