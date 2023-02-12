@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Accounts,SchoolModel,StaffModel,ClassroomModel,BlackListedToken,Subject
+from .models import Accounts,SchoolModel,StaffModel,ClassroomModel,BlackListedToken,Subject,StudentModel
 from django.contrib.admin import ModelAdmin
 
 class SchoolAdmin(ModelAdmin):
@@ -19,6 +19,10 @@ class ClassroomAdmin(ModelAdmin):
 class SubjectAdmin(ModelAdmin):
     list_display = ("name","classroom","teacher","school")
     list_filter = ("classroom","teacher","school")
+    
+class StudentAdmin(ModelAdmin):
+    list_display = ("full_name","className","school")
+    list_filter = ("className","subjects","school")
         
 admin.site.register(SchoolModel,SchoolAdmin)
 admin.site.register(StaffModel,StaffAdmin)
@@ -26,4 +30,5 @@ admin.site.register(Accounts,AccountsAdmin)
 admin.site.register(ClassroomModel,ClassroomAdmin)
 admin.site.register(BlackListedToken)
 admin.site.register(Subject,SubjectAdmin)
+admin.site.register(StudentModel,StudentAdmin)
 # Register your models here.

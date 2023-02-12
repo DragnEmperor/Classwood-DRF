@@ -25,3 +25,22 @@ class StaffLevelPermission(permissions.BasePermission):
         staff = StaffModel.objects.filter(user=request.user).exists()
         return staff
     
+
+
+class RestrictedStaffPermission(StaffLevelPermission):
+     def has_permission(self, request, view):
+        return (view.action == 'list' and super(RestrictedStaffPermission, self).has_permission(request, view))
+# class ActionBasedPermission(permissions.AllowAny):
+#     """
+#     Grant or deny access to a view, based on a mapping in view.action_permissions
+#     """
+#     def has_permission(self, request, view):
+#         for klass, actions in getattr(view, 'action_permissions', {}).items():
+#             print('view',view.action)
+#             print('view',actions)
+#             print('view',klass)
+#             if view.action in actions:
+#                 print('ran')
+#                 return klass().has_permission(request, view)
+#         return False
+    

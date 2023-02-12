@@ -5,6 +5,17 @@ from django.utils.translation import gettext as _
 from rest_framework.validators import ValidationError
 from .function import create_jwt_pair
 
+
+def generate_staff_user(first_name,phone,joining):
+    email = first_name.lower() + phone[-3:] + phone[3:5] + "@classwood.com"
+    email_exists = models.Accounts.objects.filter(email=email).exists()
+    if email_exists:
+        raise ValidationError("User already exists with same name, mobile number")
+    joining = joining.isoformat().split('-')
+    password = first_name.lower()[0:5] + str(joining[2]) + str(joining[1]) + phone[-2:]
+    return {'email':email,'password':password} 
+
+
 class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Accounts
@@ -33,17 +44,32 @@ class SchoolProfileSerializer(serializers.ModelSerializer):
         fields = "__all__"
     
 class StaffCreateSerializer(serializers.ModelSerializer):
-    user = AccountSerializer()
+    user = AccountSerializer(required=False)
     # school = SchoolProfileSerializer()
     class Meta:
         model = models.StaffModel
         fields = "__all__"
-            
+    
     def create(self, validated_data):
-        user_data = validated_data.pop('user')
+        # user_data = validated_data.pop('user')
+        user_data = generate_staff_user(validated_data.get('first_name'), validated_data.get('mobile_number'), validated_data.get('date_of_joining'))
         return models.StaffModel.objects.create(user=models.Accounts.objects.create_user(**user_data),**validated_data)
+    
+class StaffListSerializer(serializers.ModelSerializer):
+    user = AccountSerializer()
+    incharge_of = serializers.CharField()
+    sub_incharge_of = serializers.StringRelatedField(many=True)
+    class Meta:
+        model = models.StaffModel
+        fields = "__all__"
 
 class ClassroomCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.ClassroomModel
+        fields = "__all__"
+        
+class ClassroomListSerializer(serializers.ModelSerializer):
+    strength = serializers.CharField()
     class Meta:
         model = models.ClassroomModel
         fields = "__all__"
@@ -51,7 +77,7 @@ class ClassroomCreateSerializer(serializers.ModelSerializer):
 class AllSubjectSerializer(serializers.ModelSerializer):
     # Doubt
     classroom = serializers.StringRelatedField()
-    teacher = serializers.StringRelatedField()
+    teacher = serializers.SlugRelatedField(slug_field='full_name',read_only=True)
     class Meta:
         model = models.Subject
         fields = "__all__"
@@ -64,18 +90,40 @@ class StaffProfileSerializer(serializers.ModelSerializer):
         model = models.StaffModel
         fields = "__all__"
         
-class ClassroomDetailSerializer(serializers.ModelSerializer):
-    class_teacher = StaffProfileSerializer()
-    sub_class_teacher = StaffProfileSerializer()
-    class Meta:
-        model = models.ClassroomModel
-        fields = "__all__"
+# class ClassroomDetailSerializer(serializers.ModelSerializer):
+#     class_teacher = StaffProfileSerializer()
+#     sub_class_teacher = StaffProfileSerializer()
+#     class Meta:
+#         model = models.ClassroomModel
+#         fields = "__all__"
         
 class SubjectCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Subject
         fields = "__all__" 
+        
+
+class StudentCreateSerializer(serializers.ModelSerializer):
+    user = AccountSerializer()
+    class Meta:
+        model = models.StudentModel
+        fields = "__all__"
+        
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')
+        subjects = validated_data.pop('subjects')
+        instance = models.StudentModel.objects.create(user=models.Accounts.objects.create_user(**user_data),**validated_data)
+        instance.subjects.set(subjects)
+        return instance
     
+class StudentReadSerializer(serializers.ModelSerializer):
+    user = AccountSerializer()
+    subjects = serializers.StringRelatedField(many=True)
+    class Meta:
+        model = models.StudentModel
+        fields = "__all__"
+
+
     
     
          

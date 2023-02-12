@@ -54,14 +54,16 @@ class StaffView(viewsets.ModelViewSet):
             items.user.password = None
         return staff
     
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return serializers.StaffListSerializer
+        return serializers.StaffCreateSerializer
+    
     def create(self,request):
         data = request.data
-        # add proper logic for checking school in response
-        school = request.data.get('school')
-        if school is None:
-            user = request.user
-            school = models.SchoolModel.objects.get(user=user)
-            data['school'] = school
+        user = request.user
+        school = models.SchoolModel.objects.get(user=user)
+        data['school'] = school
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -77,8 +79,13 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
      
     def get_queryset(self):
         user = self.request.user
-        classroom = models.ClassroomModel.objects.filter(school= models.SchoolModel.objects.get(user=user))
-        return classroom
+        classrooms = models.ClassroomModel.objects.filter(school= models.SchoolModel.objects.get(user=user))
+        return classrooms
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return serializers.ClassroomListSerializer
+        return serializers.ClassroomCreateSerializer
     
     def create(self,request):
         data = request.data
