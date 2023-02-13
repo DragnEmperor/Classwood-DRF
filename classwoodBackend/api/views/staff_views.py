@@ -116,10 +116,6 @@ class StudentCreateView(viewsets.ModelViewSet):
             return serializers.StudentReadSerializer
         return self.serializer_class
     
-    def get_object(self):
-        serializer_class = self.get_serializer_class()
-        return super().get_object()
-    
     def destroy(self, request, *args, **kwargs):
         id = self.kwargs['pk']
         student = get_object_or_404(models.Accounts, id=id)

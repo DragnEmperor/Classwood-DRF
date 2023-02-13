@@ -119,6 +119,8 @@ class StudentCreateSerializer(serializers.ModelSerializer):
 class StudentReadSerializer(serializers.ModelSerializer):
     user = AccountSerializer()
     subjects = serializers.StringRelatedField(many=True)
+    total_attendance = serializers.CharField(source='get_attendance')
+    curent_month_attendance = serializers.CharField(source='get_month_attendance')
     class Meta:
         model = models.StudentModel
         fields = "__all__"

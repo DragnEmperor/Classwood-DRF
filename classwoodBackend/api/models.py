@@ -99,6 +99,7 @@ class StaffModel(models.Model):
     mobile_number = models.CharField(validators=[mobile_regex], max_length=13)
     contact_email = models.EmailField(null=True, blank=True)
     is_class_teacher = models.BooleanField(default=False)
+    address = models.CharField(max_length=100)
 
     # School Information
     date_of_joining = models.DateField()
@@ -209,6 +210,26 @@ class StudentModel(models.Model):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+    
+    @property
+    def get_attendance(self):
+        att = Attendance.objects.filter(student=self.user.id).values("status")
+        if not att:
+            return 100
+        return att.filter(status=True).count() / att.count() * 100
+    
+    @property
+    def get_month_attendance(self):
+        att_lst = [
+            0 for _ in range(monthrange(timezone.now().year, timezone.now().month)[1])
+        ]
+        att = Attendance.objects.filter(
+            student=self.user.id, date__gte=timezone.now().replace(day=1)
+        )
+        for i in att:
+            att_lst[i.date.day - 1] = 2 if i.status else 1
+
+        return json.dumps(att_lst)
     
 class FeesDetails(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
