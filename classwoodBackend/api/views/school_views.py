@@ -14,7 +14,7 @@ class SchoolSignUpView(generics.CreateAPIView):
     serializer_class = serializers.SchoolSignUpSerializer
     permission_classes = []
     def post(self, request: Request):  
-        data = request.data  
+        data = request.data
         serializer = self.serializer_class(data=data)
 
         if serializer.is_valid():
@@ -22,7 +22,7 @@ class SchoolSignUpView(generics.CreateAPIView):
             response = {"message": "School User Created Successfully", "data": serializer.data}
             return Response(data=response, status=status.HTTP_201_CREATED)
 
-        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data=serializer.errors, status=status.HTTP_200_OK)
     
 class SchoolProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = serializers.SchoolProfileSerializer
@@ -40,7 +40,7 @@ class SchoolProfileView(generics.RetrieveUpdateAPIView):
         if serializer.is_valid():
             serializer.save()
             return Response(data=serializer.data,status=status.HTTP_201_CREATED)
-        return Response(data=serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
     
 class StaffView(viewsets.ModelViewSet):
     serializer_class = serializers.StaffCreateSerializer
@@ -57,7 +57,13 @@ class StaffView(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             return serializers.StaffListSerializer
-        return serializers.StaffCreateSerializer
+        return self.serializer_class
+    
+    def destroy(self, request, *args, **kwargs):
+        id = self.kwargs['pk']
+        staff = get_object_or_404(models.Accounts, id=id)
+        staff.delete()
+        return Response(status=204)
     
     def create(self,request):
         data = request.data
@@ -70,7 +76,7 @@ class StaffView(viewsets.ModelViewSet):
             response = {"message": "Staff Created Successfully", "data": serializer.data}
             return Response(data=response,status=status.HTTP_201_CREATED)
         
-        return Response(data=serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
     
 class ClassroomSchoolView(viewsets.ModelViewSet):
     serializer_class = serializers.ClassroomCreateSerializer
@@ -96,7 +102,7 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
         sub_teacher_account  = models.Accounts.objects.get(id=data.get('sub_class_teacher'))
         class_teacher = models.StaffModel.objects.get(user=class_teacher_account)
         if class_teacher.is_class_teacher == True:
-            return Response(data={"message":"Class Teacher Already Assigned"},status=status.HTTP_400_BAD_REQUEST)
+            return Response(data={"message":"Class Teacher Already Assigned"},status=status.HTTP_200_OK)
         models.StaffModel.objects.filter(user=class_teacher_account).update(is_class_teacher=True)
         data['class_teacher'] = class_teacher
         data['sub_class_teacher'] = models.StaffModel.objects.get(user=sub_teacher_account)
@@ -106,7 +112,7 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
             response = {"message": "Classroom Created Successfully", "data": serializer.data}
             return Response(data=response,status=status.HTTP_201_CREATED)
         
-        return Response(data=serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
     
     
     

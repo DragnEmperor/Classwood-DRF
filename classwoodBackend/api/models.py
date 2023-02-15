@@ -1,26 +1,41 @@
 from django.db import models
 from django.contrib.auth.models import (AbstractBaseUser,BaseUserManager,PermissionsMixin)
 from uuid import uuid4
-# Create your models here.
 from .manager import CustomUserManager
 from .validators import mobile_regex
 from django.utils import timezone
+from django.conf import settings
 
 def school_logo_upload(instance, filename):
     ext = filename.split(".")[-1]
-    return f"schools/{instance.user.id}/logo_{uuid4().hex}.{ext}"
+    newName = instance.name.split(' ')
+    newName = '_'.join(newName)
+    generated_name = f"schools/{newName}/logo_{uuid4().hex}.{ext}"
+    instance.school_logo_url = f'{settings.MEDIA_URL}{generated_name}'
+    return generated_name
 
 def staff_profile_upload(instance, filename):
     ext = filename.split(".")[-1]
-    return f"staff/{instance.user.id}/profile_{uuid4().hex}.{ext}"
+    newName = instance.last_name.split(' ')
+    newName = '_'.join(newName)
+    generated_name = f"schools/{instance.school.school_name}/staff/{instance.first_name}_{newName}/pic_{uuid4().hex}.{ext}"
+    instance.profile_pic_url = f'{settings.MEDIA_URL}{generated_name}'
+    return generated_name
 
 def student_profile_upload(instance, filename):
     ext = filename.split(".")[-1]
-    return f"students/{instance.user.id}/profile_{uuid4().hex}.{ext}"
+    newName = instance.last_name.split(' ')
+    newName = '_'.join(newName)
+    generated_name = f"schools/{instance.school.school_name}/students/{instance.first_name}_{newName}/pic_{uuid4().hex}.{ext}"
+    instance.profile_pic_url = f'{settings.MEDIA_URL}{generated_name}'
+    return generated_name
 
 def subject_profile_upload(instance, filename):
     ext = filename.split(".")[-1]
-    return f"subjects/{instance.user.name}/profile_{uuid4().hex}.{ext}"
+    newName = str(instance.classroom)
+    generated_name = f"schools/{instance.school.school_name}/subjects/{newName}/pic_{uuid4().hex}.{ext}"
+    instance.subject_pic_url = f'{settings.MEDIA_URL}{generated_name}'
+    return generated_name
 
 
 
@@ -60,6 +75,7 @@ class SchoolModel(models.Model):
     school_state = models.CharField(max_length=100)
     school_zipcode = models.CharField(max_length=100)
     school_logo = models.ImageField(upload_to=school_logo_upload, null=True, blank=True)
+    school_logo_url = models.CharField(max_length=500, null=True, blank=True)
     school_website = models.URLField(max_length=200,null=True,blank=True)
     date_of_establishment = models.DateField(null=True,blank=True)
     staff_limit = models.CharField(max_length=10,default=25)
@@ -89,7 +105,7 @@ class StaffModel(models.Model):
 
     user = models.OneToOneField(Accounts, on_delete=models.CASCADE, primary_key=True)
     profile_pic = models.ImageField(upload_to=staff_profile_upload, blank=True)
-    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+    profile_pic_url = models.CharField(max_length=500, null=True, blank=True)
 
     # Personal Information
     first_name = models.CharField(max_length=50)
@@ -98,11 +114,13 @@ class StaffModel(models.Model):
     gender = models.CharField(max_length=1, choices=GENDER_CHOICE)
     mobile_number = models.CharField(validators=[mobile_regex], max_length=13)
     contact_email = models.EmailField(null=True, blank=True)
-    is_class_teacher = models.BooleanField(default=False)
     address = models.CharField(max_length=100)
+    account_no = models.CharField(max_length=100)
 
     # School Information
+    is_class_teacher = models.BooleanField(default=False)
     date_of_joining = models.DateField()
+    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
 
     class Meta:
         ordering = ["date_of_joining", "first_name", "last_name"]
@@ -129,8 +147,8 @@ class ClassroomModel(models.Model):
     # Class Information
     class_name = models.CharField(max_length=50)
     section_name = models.CharField(max_length=1)
-    class_teacher = models.ForeignKey(StaffModel, on_delete=models.CASCADE)
-    sub_class_teacher = models.ForeignKey(StaffModel, on_delete=models.CASCADE, related_name="sub_class_teacher", null=True, blank=True)
+    class_teacher = models.ForeignKey(StaffModel, on_delete=models.SET_NULL,null=True)
+    sub_class_teacher = models.ForeignKey(StaffModel, on_delete=models.SET_NULL, related_name="sub_class_teacher", null=True, blank=True)
     
     # Subject Information
     # subjects = models.ManyToManyField(Subject, related_name="class_map")
@@ -141,10 +159,26 @@ class ClassroomModel(models.Model):
 
     @property
     def strength(self):
-        return StudentModel.objects.filter(className=self.id).count()
+        return StudentModel.objects.filter(classroom=self.id).count()
 
     def __str__(self):
-        return f"{self.class_name} - {self.section_name}"
+        return f"{self.class_name}-{self.section_name}"
+    
+    @property
+    def no_of_subjects(self):
+        return Subject.objects.filter(classroom=self.id).count()
+    
+    @property
+    def no_of_teachers(self):
+        subjects = Subject.objects.filter(classroom=self.id)
+        unique_teachers = subjects.order_by().values_list('teacher', flat=True).distinct()
+        count=2
+        for teacher in unique_teachers:
+            if teacher == self.sub_class_teacher.user.id or teacher == self.class_teacher.user.id:
+                continue
+            if StaffModel.objects.filter(user=teacher).exists():
+              count += 1
+        return count
     
 
 # add, if required, code for setting onDelete to models.SET() to class teacher
@@ -153,6 +187,7 @@ class Subject(models.Model):
     name = models.CharField(max_length=50)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
     subject_pic = models.ImageField(upload_to=subject_profile_upload, blank=True)
+    subject_pic_url = models.CharField(max_length=500, null=True, blank=True)
     teacher = models.ForeignKey(StaffModel, on_delete=models.SET_NULL, related_name="taught_by", null=True)
     classroom = models.ForeignKey(ClassroomModel, on_delete=models.CASCADE)
 
@@ -171,6 +206,7 @@ class StudentModel(models.Model):
 
     user = models.OneToOneField(Accounts, on_delete=models.CASCADE, primary_key=True)
     profile_pic = models.ImageField(upload_to=student_profile_upload,null=True, blank=True)
+    profile_pic_url = models.CharField(max_length=500, null=True, blank=True)
 
     # Personal Information
     first_name = models.CharField(max_length=50)
@@ -194,8 +230,8 @@ class StudentModel(models.Model):
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
 
     # Class Information
-    className = models.ForeignKey(
-        ClassroomModel, on_delete=models.CASCADE, verbose_name="Class"
+    classroom = models.ForeignKey(
+        ClassroomModel, on_delete=models.SET_NULL, verbose_name="Class",null=True
     )
     subjects = models.ManyToManyField(Subject, related_name="learning_subjects")
     
@@ -204,7 +240,7 @@ class StudentModel(models.Model):
         return self.roll_no
 
     class Meta:
-        unique_together = ("school", "roll_no","admission_no","className")
+        unique_together = ("school", "roll_no","admission_no","classroom")
         ordering = ["roll_no"]
 
     @property
@@ -270,7 +306,7 @@ class PaymentInfo(models.Model):
 
 class Attendance(models.Model):
     student = models.ForeignKey(StudentModel, on_delete=models.CASCADE)
-    date = models.DateField()
+    date = models.DateField(default=timezone.now)
     status = models.BooleanField(default=False)
 
     class Meta:

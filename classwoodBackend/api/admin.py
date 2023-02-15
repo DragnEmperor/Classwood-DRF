@@ -21,8 +21,8 @@ class SubjectAdmin(ModelAdmin):
     list_filter = ("classroom","teacher","school")
     
 class StudentAdmin(ModelAdmin):
-    list_display = ("full_name","className","school")
-    list_filter = ("className","subjects","school")
+    list_display = ("full_name","classroom","school")
+    list_filter = ("classroom","subjects","school")
         
 admin.site.register(SchoolModel,SchoolAdmin)
 admin.site.register(StaffModel,StaffAdmin)

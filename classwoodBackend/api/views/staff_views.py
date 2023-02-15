@@ -8,9 +8,10 @@ from drf_spectacular.utils import extend_schema,OpenApiParameter,OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from .. import serializers
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 class StaffSingleView(generics.RetrieveUpdateAPIView):
-    serializer_class = serializers.StaffProfileSerializer
+    serializer_class = serializers.StaffListSerializer
     permission_classes = [IsAuthenticated & StaffLevelPermission & ~AdminPermission & IsTokenValid]
     
     def get_object(self):
@@ -22,14 +23,14 @@ class StaffSingleView(generics.RetrieveUpdateAPIView):
         data = request.data
         staff = self.get_object()
         if data.get('user') is not None:
-            return Response(data={"message":"Account credentials cannot be changed. Contact Administrator"},status=status.HTTP_400_BAD_REQUEST)
+            return Response(data={"message":"Account credentials cannot be changed. Contact Administrator"},status=status.HTTP_200_OK)
         if data.get('school') is not None:
-            return Response(data={"message":"School cannot be changed. Contact Administrator"},status=status.HTTP_400_BAD_REQUEST)
+            return Response(data={"message":"School cannot be changed. Contact Administrator"},status=status.HTTP_200_OK)
         serializer = self.serializer_class(staff,data=data,partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(data=serializer.data,status=status.HTTP_201_CREATED)
-        return Response(data=serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
     
 class ClassroomStaffView(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.ClassroomCreateSerializer
@@ -82,7 +83,7 @@ class SubjectCreateView(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         if self.action=='list':
-            return serializers.SubjectReadSerializer
+            return serializers.SubjectListSerializer
         return self.serializer_class
     
     def create(self, request):
@@ -101,7 +102,7 @@ class SubjectCreateView(viewsets.ModelViewSet):
             response = {"message": "Subject Created Successfully", "data": serializer.data}
             return Response(data=response,status=status.HTTP_201_CREATED)
         
-        return Response(data=serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
     
 # class StudentCreateViewset(viewsets.GenericViewSet,mixins.CreateModelMixin):
 #     pass
@@ -113,7 +114,7 @@ class StudentCreateView(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         if self.action =='list':
-            return serializers.StudentReadSerializer
+            return serializers.StudentListSerializer
         return self.serializer_class
     
     def destroy(self, request, *args, **kwargs):
@@ -126,9 +127,10 @@ class StudentCreateView(viewsets.ModelViewSet):
         serializer_class = self.get_serializer_class()
         get_classroom = self.request.data.get('classroom')
         if get_classroom is None:
+            print('test')
             students = models.StudentModel.objects.all()
         else:
-            students = models.StudentModel.objects.filter(className=get_classroom)
+            students = models.StudentModel.objects.filter(classroom=get_classroom)
         for student in students:
             student.user.password = None
         return students
@@ -143,7 +145,24 @@ class StudentCreateView(viewsets.ModelViewSet):
             serializer.save()
             response = {"message": "Student Created Successfully", "data": serializer.data}
             return Response(data=response,status=status.HTTP_201_CREATED)
-        return Response(data=serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+    
+    
+class AttendanceView(viewsets.ModelViewSet):
+    serializer_class = serializers.AttendanceSerializer
+    permission_classes = [IsAuthenticated & (StaffLevelPermission | AdminPermission) & IsTokenValid]
+    queryset = models.Attendance.objects.all()
+    
+    def create(self, request):
+        data = request.data
+        status = request.data.get('status') == 'P'
+        student = models.StudentModel.objects.get_object_or_404(models.StudentModel,id=request.data.get('student'))
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            response = {"message": "Attendance Marked Successfully", "data": serializer.data}
+            return Response(data=response,status=status.HTTP_201_CREATED)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
 
     
     
