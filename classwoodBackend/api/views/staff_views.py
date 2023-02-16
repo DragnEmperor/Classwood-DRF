@@ -70,10 +70,12 @@ class SubjectCreateView(viewsets.ModelViewSet):
     # ],methods=['GET'])
     
     def get_queryset(self):
-        get_classroom = self.request.data.get('classroom')
+        get_classroom = self.request.GET.get('classroom',None)
         teacher = models.StaffModel.objects.filter(user=self.request.user).exists()
-        if not teacher:
+        if not teacher and not get_classroom:
             return models.Subject.objects.all()
+        if get_classroom is not None:
+            return models.Subject.objects.filter(classroom=get_classroom)
         teacher = models.StaffModel.objects.get(user=self.request.user)
         classroom = models.ClassroomModel.objects.get(Q(class_teacher=teacher) | Q(sub_class_teacher=teacher))
         if str(get_classroom) == str(classroom.id):

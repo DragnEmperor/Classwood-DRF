@@ -1,6 +1,5 @@
 from django.shortcuts import render
 from rest_framework import generics,status,viewsets,serializers
-# Create your views here.
 from .. import serializers
 from rest_framework.response import Response
 from rest_framework.request import Request
@@ -92,6 +91,12 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
         if self.action == 'list':
             return serializers.ClassroomListSerializer
         return serializers.ClassroomCreateSerializer
+    
+    def destroy(self, request, *args, **kwargs):
+        classroom = models.ClassroomModel.objects.get(id=self.kwargs['pk'])
+        models.StaffModel.objects.filter(user=classroom.class_teacher).update(is_class_teacher=False)
+        classroom.delete()
+        return Response(status=204)
     
     def create(self,request):
         data = request.data
