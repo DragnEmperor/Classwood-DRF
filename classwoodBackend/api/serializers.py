@@ -81,7 +81,6 @@ class ClassroomListSerializer(serializers.ModelSerializer):
         return str(obj.no_of_teachers)
         
 class SubjectListSerializer(serializers.ModelSerializer):
-    # Doubt how to add property without disrupting swagger
     classroom = serializers.StringRelatedField()
     teacher = serializers.SerializerMethodField(method_name='get_full_name')
     class Meta:
@@ -91,6 +90,41 @@ class SubjectListSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
         return obj.teacher.full_name
     
+# class AttachmentSerializer(serializers.ModelSerializer):
+#     fileName = serializers.FileField()
+#     class Meta:
+#         model = models.Attachment
+#         fields='__all__'
+    
+class NoticeSerializer(serializers.ModelSerializer):
+    attachments = serializers.ListField(child=serializers.FileField(),required=False,write_only=True)
+    read_by_students = serializers.ModelField(model_field=models.Notice._meta.get_field('read_by_students'),required=False)
+    read_by_staff = serializers.ModelField(model_field=models.Notice._meta.get_field('read_by_staff'),required=False)
+    class Meta:
+        model = models.Notice
+        fields = "__all__"
+        
+    def create(self, validated_data):
+        attachments = validated_data.pop('attachments')
+        notice = models.Notice.objects.create(**validated_data)
+        for attach in attachments:
+            attachment = models.Attachment.objects.create(fileName=attach,school = validated_data.get('author'))
+            notice.attachments.add(attachment)
+        return notice
+    
+class NoticeListSerializer(serializers.ModelSerializer):
+    attachments = serializers.StringRelatedField(many=True)
+    read_status = serializers.SerializerMethodField()
+    class Meta:
+        model = models.Notice
+        fields = '__all__'
+            
+    def get_read_status(self,obj):  
+        currentUser = self.context['request'].user
+        return obj.read_by_students.filter(user=currentUser).exists() | obj.read_by_staff.filter(user=currentUser).exists()
+    
+    
+    
 # Staff Serializers
 class StaffListSerializer(serializers.ModelSerializer):
     user = AccountSerializer()
@@ -99,13 +133,6 @@ class StaffListSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.StaffModel
         fields = "__all__"
-        
-# class ClassroomDetailSerializer(serializers.ModelSerializer):
-#     class_teacher = StaffProfileSerializer()
-#     sub_class_teacher = StaffProfileSerializer()
-#     class Meta:
-#         model = models.ClassroomModel
-#         fields = "__all__"
         
 class SubjectCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -129,8 +156,9 @@ class StudentCreateSerializer(serializers.ModelSerializer):
 class StudentListSerializer(serializers.ModelSerializer):
     user = AccountSerializer()
     subjects = serializers.StringRelatedField(many=True)
+    classroom = serializers.StringRelatedField()
     total_attendance = serializers.SerializerMethodField()
-    curent_month_attendance = serializers.SerializerMethodField()
+    month_attendance = serializers.SerializerMethodField()
     
     class Meta:
         model = models.StudentModel
@@ -139,16 +167,24 @@ class StudentListSerializer(serializers.ModelSerializer):
     def get_total_attendance(self, obj):
         return str(obj.get_attendance)
     
-    def get_current_month_attendance(self, obj):
+    def get_month_attendance(self, obj):
         return str(obj.get_month_attendance)
     
 class AttendanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Attendance
         fields = "__all__"
+        
+        
+class AttendanceListSerializer(serializers.ModelSerializer):
+    student = serializers.StringRelatedField()
+    classroom = serializers.StringRelatedField()
+    school = serializers.StringRelatedField()
+    class Meta:
+        model = models.Attendance
+        fields = "__all__"
 
 
-    
     
          
 # class AuthTokenSerializer(serializers.Serializer):

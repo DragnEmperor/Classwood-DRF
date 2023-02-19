@@ -1,5 +1,5 @@
 from django.urls import path,include
-from .views.school_views import SchoolSignUpView,StaffView,ClassroomSchoolView,SchoolProfileView
+from .views.school_views import SchoolSignUpView,StaffView,ClassroomSchoolView,SchoolProfileView,NoticeView
 from .views.staff_views import StaffSingleView,ClassroomStaffView,SubjectCreateView,StudentCreateView,AttendanceView
 from .views.general_views import LoginView,LogoutView
 from rest_framework.routers import DefaultRouter
@@ -8,12 +8,13 @@ from rest_framework_simplejwt.views import TokenRefreshView
 router = DefaultRouter()
 router.register('staff', StaffView)
 router.register('classroom', ClassroomSchoolView)
+router.register('notice', NoticeView)
 
 router2 = DefaultRouter()
 router2.register('classroom', ClassroomStaffView)
 router2.register('subject', SubjectCreateView)
 router2.register('student', StudentCreateView)
-router2.register('student/attendance', AttendanceView)
+router2.register('attendance', AttendanceView)
 
 urlpatterns = [
     path("signup/",SchoolSignUpView.as_view(),name="school_signup"),

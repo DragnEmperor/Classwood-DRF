@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Accounts,SchoolModel,StaffModel,ClassroomModel,BlackListedToken,Subject,StudentModel
+from . import models
 from django.contrib.admin import ModelAdmin
 
 class SchoolAdmin(ModelAdmin):
@@ -23,12 +23,19 @@ class SubjectAdmin(ModelAdmin):
 class StudentAdmin(ModelAdmin):
     list_display = ("full_name","classroom","school")
     list_filter = ("classroom","subjects","school")
+    
+class AttendanceAdmin(ModelAdmin):
+    list_display = ("student","date","present",)
+    list_filter = ("student","date","present",)
         
-admin.site.register(SchoolModel,SchoolAdmin)
-admin.site.register(StaffModel,StaffAdmin)
-admin.site.register(Accounts,AccountsAdmin)
-admin.site.register(ClassroomModel,ClassroomAdmin)
-admin.site.register(BlackListedToken)
-admin.site.register(Subject,SubjectAdmin)
-admin.site.register(StudentModel,StudentAdmin)
+admin.site.register(models.SchoolModel,SchoolAdmin)
+admin.site.register(models.StaffModel,StaffAdmin)
+admin.site.register(models.Accounts,AccountsAdmin)
+admin.site.register(models.ClassroomModel,ClassroomAdmin)
+admin.site.register(models.BlackListedToken)
+admin.site.register(models.Subject,SubjectAdmin)
+admin.site.register(models.StudentModel,StudentAdmin)
+admin.site.register(models.Attendance,AttendanceAdmin)
+admin.site.register(models.Notice)
+admin.site.register(models.Attachment)
 # Register your models here.

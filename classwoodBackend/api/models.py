@@ -5,6 +5,8 @@ from .manager import CustomUserManager
 from .validators import mobile_regex
 from django.utils import timezone
 from django.conf import settings
+from calendar import monthrange
+import json,os
 
 def school_logo_upload(instance, filename):
     ext = filename.split(".")[-1]
@@ -37,6 +39,11 @@ def subject_profile_upload(instance, filename):
     instance.subject_pic_url = f'{settings.MEDIA_URL}{generated_name}'
     return generated_name
 
+def notice_attach_upload(instance, filename):
+    ext = filename.split(".")[-1]
+    file_title = os.path.splitext(filename)[0]
+    generated_name = f"schools/{instance.school.school_name}/notices/{file_title}_{uuid4().hex}.{ext}"
+    return generated_name
 
 
 class Accounts(AbstractBaseUser, PermissionsMixin):
@@ -198,7 +205,7 @@ class Subject(models.Model):
         ordering = ["name"]
 
     def __str__(self):
-        return self.name
+        return f'{self.name} {self.classroom}'
     
     
 class StudentModel(models.Model):
@@ -249,10 +256,10 @@ class StudentModel(models.Model):
     
     @property
     def get_attendance(self):
-        att = Attendance.objects.filter(student=self.user.id).values("status")
+        att = Attendance.objects.filter(student=self.user.id).values("present")
         if not att:
             return 100
-        return att.filter(status=True).count() / att.count() * 100
+        return att.filter(present=True).count() / att.count() * 100
     
     @property
     def get_month_attendance(self):
@@ -263,9 +270,9 @@ class StudentModel(models.Model):
             student=self.user.id, date__gte=timezone.now().replace(day=1)
         )
         for i in att:
-            att_lst[i.date.day - 1] = 2 if i.status else 1
+            att_lst[i.date.day - 1] = 2 if i.present else 1
 
-        return json.dumps(att_lst)
+        return json.dumps(att_lst) 
     
 class FeesDetails(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -307,7 +314,9 @@ class PaymentInfo(models.Model):
 class Attendance(models.Model):
     student = models.ForeignKey(StudentModel, on_delete=models.CASCADE)
     date = models.DateField(default=timezone.now)
-    status = models.BooleanField(default=False)
+    present = models.BooleanField(default=False)
+    classroom = models.ForeignKey(ClassroomModel, on_delete=models.CASCADE)
+    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "Attendance"
@@ -318,26 +327,54 @@ class Attendance(models.Model):
         ordering = ["-date"]
         unique_together = ["student", "date"]
 
-    @classmethod
-    def get_attendance(cls, student):
-        att = cls.objects.filter(student=student).values("status")
-        if not att:
-            return 100
-
-        return att.filter(status=True).count() / att.count() * 100
-
-    @classmethod
-    def get_month_attendance(cls, student):
-        att_lst = [
-            0 for _ in range(monthrange(timezone.now().year, timezone.now().month)[1])
-        ]
-        att = cls.objects.filter(
-            student=student, date__gte=timezone.now().replace(day=1)
-        )
-        for i in att:
-            att_lst[i.date.day - 1] = 2 if i.status else 1
-
-        return json.dumps(att_lst)
-
     def __str__(self):
         return self.student.user.email
+
+
+# class NoticeAttachment(models.Model):
+#     name = models.CharField(max_length=255)
+#     file = models.FileField(upload_to=notice_attach_upload)
+
+
+# class AttachmentMapping(models.Model):
+#     notice = models.ForeignKey("Notice", on_delete=models.CASCADE)
+#     attachment = models.ForeignKey("NoticeAttachment", on_delete=models.CASCADE)
+
+#     class Meta:
+#         unique_together = ("notice", "attachment")
+#         indexes = [
+#             models.Index(fields=["notice", "attachment"]),
+#         ]
+
+
+    
+class Notice(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    author = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    date_posted = models.DateTimeField(default=timezone.now)
+    attachments = models.ManyToManyField('Attachment',blank=True)
+    read_by_students = models.ManyToManyField('StudentModel', related_name="read_by_students", blank=True)
+    read_by_staff = models.ManyToManyField('StaffModel', related_name="read_by_teachers", blank=True)
+
+    class Meta:
+        ordering = ["-date_posted"]
+        unique_together = ("author", "title",'date_posted')
+        
+    @classmethod
+    def read_status(cls,notice,currentUser):
+        print('test',notice)
+        print('testtte',notice.read_by_students.filter(id=currentUser))   
+        return notice.read_by_students.filter(id=currentUser).exists() | notice.read_by_staff.filter(id=currentUser).exists()
+     
+    def __str__(self):
+        return self.title
+
+class Attachment(models.Model):
+    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+    fileName = models.FileField(upload_to=notice_attach_upload, null=True, blank=True)
+    
+    def __str__(self):
+        return self.fileName.url
+    

@@ -1,5 +1,5 @@
 from rest_framework import permissions
-from .models import SchoolModel,StaffModel,BlackListedToken
+from .models import SchoolModel,StaffModel,BlackListedToken,StudentModel
 
 class AdminPermission(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -25,11 +25,15 @@ class StaffLevelPermission(permissions.BasePermission):
         staff = StaffModel.objects.filter(user=request.user).exists()
         return staff
     
+class StudentLevelPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return StudentModel.objects.filter(user=request.user).exists()
+    
 
 
-class RestrictedStaffPermission(StaffLevelPermission):
+class ReadOnlyStaffPermission(StaffLevelPermission):
      def has_permission(self, request, view):
-        return (view.action == 'list' and super(RestrictedStaffPermission, self).has_permission(request, view))
+        return ((view.action == 'list' or view.action=='retrieve') and super(ReadOnlyStaffPermission, self).has_permission(request, view))
 # class ActionBasedPermission(permissions.AllowAny):
 #     """
 #     Grant or deny access to a view, based on a mapping in view.action_permissions

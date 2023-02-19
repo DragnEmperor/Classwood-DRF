@@ -1,7 +1,7 @@
 from rest_framework import generics,status,viewsets,mixins
 from rest_framework.response import Response
 from .. import models
-from ..permissions import AdminPermission,StaffLevelPermission,IsTokenValid,RestrictedStaffPermission
+from ..permissions import AdminPermission,StaffLevelPermission,IsTokenValid,ReadOnlyStaffPermission
 from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema,OpenApiParameter,OpenApiExample
@@ -112,7 +112,7 @@ class SubjectCreateView(viewsets.ModelViewSet):
 class StudentCreateView(viewsets.ModelViewSet):
     serializer_class = serializers.StudentCreateSerializer
     queryset = models.StudentModel.objects.all()
-    permission_classes = [(RestrictedStaffPermission | AdminPermission) & IsAuthenticated & IsTokenValid]
+    permission_classes = [(ReadOnlyStaffPermission | AdminPermission) & IsAuthenticated & IsTokenValid]
     
     def get_serializer_class(self):
         if self.action =='list':
@@ -126,10 +126,8 @@ class StudentCreateView(viewsets.ModelViewSet):
         return Response(status=204)
     
     def get_queryset(self):
-        serializer_class = self.get_serializer_class()
-        get_classroom = self.request.data.get('classroom')
+        get_classroom = self.request.GET.get('classroom',None)
         if get_classroom is None:
-            print('test')
             students = models.StudentModel.objects.all()
         else:
             students = models.StudentModel.objects.filter(classroom=get_classroom)
@@ -142,6 +140,10 @@ class StudentCreateView(viewsets.ModelViewSet):
         user = request.user
         school = models.SchoolModel.objects.get(user=user)
         data['school'] = school
+        subjects = data.get('subjects')
+        for subject in subjects:
+            if not models.Subject.objects.filter(classroom=data.get('classroom'),id=subject).exists():
+                return Response(data={"message": "Subject(s) not found in classroom"},status=status.HTTP_400_BAD_REQUEST)
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -155,10 +157,22 @@ class AttendanceView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated & (StaffLevelPermission | AdminPermission) & IsTokenValid]
     queryset = models.Attendance.objects.all()
     
+    def get_serializer_class(self):
+        if self.action=='list':
+            return serializers.AttendanceListSerializer
+        return self.serializer_class
+    
     def create(self, request):
         data = request.data
-        status = request.data.get('status') == 'P'
-        student = models.StudentModel.objects.get_object_or_404(models.StudentModel,id=request.data.get('student'))
+        user = request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
+        data['school'] = school
+        student_class = (models.StudentModel.objects.get(user=data.get('student'))).classroom.id
+        if str(data.get('classroom')) != str(student_class):
+            return Response(data={"message": "Classroom does not match with student's classroom"},status=status.HTTP_200_OK)
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()

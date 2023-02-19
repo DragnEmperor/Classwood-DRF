@@ -3,11 +3,12 @@ from rest_framework import generics,status,viewsets,serializers
 from .. import serializers
 from rest_framework.response import Response
 from rest_framework.request import Request
-from ..permissions import AdminPermission,StaffLevelPermission,IsTokenValid
+from ..permissions import AdminPermission,StaffLevelPermission,IsTokenValid,ReadOnlyStaffPermission
 from rest_framework.permissions import IsAuthenticated
 from .. import models
 import json
 from django.core.serializers import serialize
+from rest_framework.parsers import MultiPartParser,FormParser,JSONParser
 
 class SchoolSignUpView(generics.CreateAPIView):
     serializer_class = serializers.SchoolSignUpSerializer
@@ -45,6 +46,7 @@ class StaffView(viewsets.ModelViewSet):
     serializer_class = serializers.StaffCreateSerializer
     permission_classes = [IsAuthenticated & AdminPermission & IsTokenValid]
     queryset = models.StaffModel.objects.all()
+
      
     def get_queryset(self):
         user = self.request.user
@@ -117,6 +119,43 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
             response = {"message": "Classroom Created Successfully", "data": serializer.data}
             return Response(data=response,status=status.HTTP_201_CREATED)
         
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+    
+class NoticeView(viewsets.ModelViewSet):
+    serializer_class = serializers.NoticeSerializer
+    permission_classes = [IsAuthenticated & (ReadOnlyStaffPermission | AdminPermission) & IsTokenValid]
+    queryset = models.Notice.objects.all()
+    parser_classes = (MultiPartParser, FormParser,JSONParser)
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return serializers.NoticeListSerializer
+        return self.serializer_class
+    
+    def get_object(self):
+        notice = super().get_object()
+        studentuser = None
+        try:
+         studentuser = models.StudentModel.objects.get(user = self.request.user)
+        except models.StudentModel.DoesNotExist:
+            try:
+               staffuser = models.StaffModel.objects.get(user = self.request.user)
+            except models.StaffModel.DoesNotExist:
+               return notice
+        if studentuser is not None:
+            notice.read_by_students.add(studentuser)
+        else:
+            notice.read_by_staff.add(staffuser)
+        notice.save()
+        return notice
+    
+    def create(self, request):
+        data = request.data
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            response = {"message": "Notice Created Successfully", "data": serializer.data}
+            return Response(data=response,status=status.HTTP_201_CREATED)
         return Response(data=serializer.errors,status=status.HTTP_200_OK)
     
     
