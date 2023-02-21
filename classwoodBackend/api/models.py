@@ -10,7 +10,7 @@ import json,os
 
 def school_logo_upload(instance, filename):
     ext = filename.split(".")[-1]
-    newName = instance.name.split(' ')
+    newName = instance.school_name.split(' ')
     newName = '_'.join(newName)
     generated_name = f"schools/{newName}/logo_{uuid4().hex}.{ext}"
     instance.school_logo_url = f'{settings.MEDIA_URL}{generated_name}'
@@ -45,7 +45,7 @@ def notice_attach_upload(instance, filename):
     generated_name = f"schools/{instance.school.school_name}/notices/{file_title}_{uuid4().hex}.{ext}"
     return generated_name
 
-
+# ACCOUNTS, AUTH RELATED MODELS
 class Accounts(AbstractBaseUser, PermissionsMixin):
     """
     Accounts model
@@ -69,7 +69,7 @@ class BlackListedToken(models.Model):
     class Meta:
         unique_together = ("token", "user")
         
-        
+# SCHOOL SIGNUP RELATED MODELS    
 class SchoolModel(models.Model):
     """
     SchoolSignUpModel model
@@ -147,7 +147,7 @@ class StaffModel(models.Model):
     def __str__(self):
         return self.user.email
     
-    
+# CLASSROOM RELATED MODELS 
 class ClassroomModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
@@ -207,7 +207,7 @@ class Subject(models.Model):
     def __str__(self):
         return f'{self.name} {self.classroom}'
     
-    
+
 class StudentModel(models.Model):
     GENDER_CHOICE = (("1", "Male"), ("2", "Female"), ("3", "Other"))
 
@@ -274,6 +274,57 @@ class StudentModel(models.Model):
 
         return json.dumps(att_lst) 
     
+# ATTENDANCE RELATED MODEL
+class Attendance(models.Model):
+    student = models.ForeignKey(StudentModel, on_delete=models.CASCADE)
+    date = models.DateField(default=timezone.now)
+    present = models.BooleanField(default=False)
+    classroom = models.ForeignKey(ClassroomModel, on_delete=models.CASCADE)
+    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = "Attendance"
+        verbose_name_plural = "Attendance"
+        indexes = [
+            models.Index(fields=["student", "date"]),
+        ]
+        ordering = ["-date"]
+        unique_together = ["student", "date"]
+
+    def __str__(self):
+        return self.student.user.email
+
+# NOTICE RELATED MODELS 
+class Notice(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    date_posted = models.DateTimeField(default=timezone.now)
+    attachments = models.ManyToManyField('Attachment',blank=True)
+    read_by_students = models.ManyToManyField('StudentModel', related_name="read_by_students", blank=True)
+    read_by_staff = models.ManyToManyField('StaffModel', related_name="read_by_teachers", blank=True)
+
+    class Meta:
+        ordering = ["-date_posted"]
+        unique_together = ("school", "title",'date_posted')
+        
+    @classmethod
+    def read_status(cls,notice,currentUser): 
+        return notice.read_by_students.filter(id=currentUser).exists() | notice.read_by_staff.filter(id=currentUser).exists()
+     
+    def __str__(self):
+        return self.title
+
+class Attachment(models.Model):
+    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+    fileName = models.FileField(upload_to=notice_attach_upload, null=True, blank=True)
+    
+    def __str__(self):
+        return self.fileName.url
+    
+    
+#PAYMENT RELATED MODELS 
 class FeesDetails(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -286,8 +337,7 @@ class FeesDetails(models.Model):
 
     def __str__(self):
         return f"{self.description} - {self.due_date}"
-
-
+        
 class PaymentInfo(models.Model):
     PAYMENT_MODE = (
         ("1", "Cheque"),
@@ -310,71 +360,34 @@ class PaymentInfo(models.Model):
         ordering = ["-payment_date"]
         verbose_name = "Payment"
         verbose_name_plural = "Payments"
-
-class Attendance(models.Model):
-    student = models.ForeignKey(StudentModel, on_delete=models.CASCADE)
-    date = models.DateField(default=timezone.now)
-    present = models.BooleanField(default=False)
-    classroom = models.ForeignKey(ClassroomModel, on_delete=models.CASCADE)
-    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
-
-    class Meta:
-        verbose_name = "Attendance"
-        verbose_name_plural = "Attendance"
-        indexes = [
-            models.Index(fields=["student", "date"]),
-        ]
-        ordering = ["-date"]
-        unique_together = ["student", "date"]
-
-    def __str__(self):
-        return self.student.user.email
-
-
-# class NoticeAttachment(models.Model):
-#     name = models.CharField(max_length=255)
-#     file = models.FileField(upload_to=notice_attach_upload)
-
-
-# class AttachmentMapping(models.Model):
-#     notice = models.ForeignKey("Notice", on_delete=models.CASCADE)
-#     attachment = models.ForeignKey("NoticeAttachment", on_delete=models.CASCADE)
-
-#     class Meta:
-#         unique_together = ("notice", "attachment")
-#         indexes = [
-#             models.Index(fields=["notice", "attachment"]),
-#         ]
-
-
-    
-class Notice(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    author = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    date_posted = models.DateTimeField(default=timezone.now)
-    attachments = models.ManyToManyField('Attachment',blank=True)
-    read_by_students = models.ManyToManyField('StudentModel', related_name="read_by_students", blank=True)
-    read_by_staff = models.ManyToManyField('StaffModel', related_name="read_by_teachers", blank=True)
-
-    class Meta:
-        ordering = ["-date_posted"]
-        unique_together = ("author", "title",'date_posted')
         
-    @classmethod
-    def read_status(cls,notice,currentUser):
-        print('test',notice)
-        print('testtte',notice.read_by_students.filter(id=currentUser))   
-        return notice.read_by_students.filter(id=currentUser).exists() | notice.read_by_staff.filter(id=currentUser).exists()
-     
-    def __str__(self):
-        return self.title
+# EXAM RELATED MODELS
+class ExamModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    school = models.ForeignKey("SchoolModel", on_delete=models.CASCADE)
+    # Exam Information
+    classroom = models.ForeignKey("ClassroomModel", on_delete=models.CASCADE)
+    subject = models.ForeignKey('Subject', on_delete=models.CASCADE)
+    max_marks = models.IntegerField(default=100)
+    attachments = models.ManyToManyField('Attachment',blank=True)
+    tag = models.CharField(max_length=50)
+    date_of_exam = models.DateField()
 
-class Attachment(models.Model):
-    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
-    fileName = models.FileField(upload_to=notice_attach_upload, null=True, blank=True)
-    
+    class Meta:
+        ordering = ["-date_of_exam"]
+
     def __str__(self):
-        return self.fileName.url
+        return f"{self.subject.name}_{self.tag}"
     
+class ResultModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    student = models.ForeignKey("StudentModel", on_delete=models.CASCADE)
+    exam = models.ForeignKey("ExamModel", on_delete=models.CASCADE)
+    score = models.IntegerField()
+
+    class Meta:
+        ordering = ["-exam__date_of_exam"]
+        unique_together = ["student", "exam"]
+
+    def __str__(self):
+        return self.student.full_name

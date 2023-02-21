@@ -96,7 +96,7 @@ class SubjectListSerializer(serializers.ModelSerializer):
 #         model = models.Attachment
 #         fields='__all__'
     
-class NoticeSerializer(serializers.ModelSerializer):
+class NoticeCreateSerializer(serializers.ModelSerializer):
     attachments = serializers.ListField(child=serializers.FileField(),required=False,write_only=True)
     read_by_students = serializers.ModelField(model_field=models.Notice._meta.get_field('read_by_students'),required=False)
     read_by_staff = serializers.ModelField(model_field=models.Notice._meta.get_field('read_by_staff'),required=False)
@@ -105,7 +105,9 @@ class NoticeSerializer(serializers.ModelSerializer):
         fields = "__all__"
         
     def create(self, validated_data):
-        attachments = validated_data.pop('attachments')
+        attachments = []
+        if 'attachments' in validated_data:
+          attachments = validated_data.pop('attachments')
         notice = models.Notice.objects.create(**validated_data)
         for attach in attachments:
             attachment = models.Attachment.objects.create(fileName=attach,school = validated_data.get('author'))
@@ -185,7 +187,32 @@ class AttendanceListSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class ExamCreateSerializer(serializers.ModelSerializer):
+    attachments = serializers.ListField(child=serializers.FileField(),required=False,write_only=True)
+    class Meta:
+        model = models.ExamModel
+        fields = "__all__"
+        
+    def create(self, validated_data):
+        attachments = []
+        if 'attachments' in validated_data:
+          attachments = validated_data.pop('attachments')
+        exam = models.ExamModel.objects.create(**validated_data)
+        for attach in attachments:
+            attachment = models.Attachment.objects.create(fileName=attach,school = validated_data.get('school'))
+            exam.attachments.add(attachment)
+        return exam
     
+class ExamListSerializer(serializers.ModelSerializer):
+    attachments = serializers.StringRelatedField(many=True)
+    class Meta:
+        model = models.ExamModel
+        fields = '__all__'
+        
+class ResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.ResultModel
+        fields = "__all__"
          
 # class AuthTokenSerializer(serializers.Serializer):
 #     """

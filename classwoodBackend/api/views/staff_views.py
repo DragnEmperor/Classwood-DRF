@@ -1,7 +1,7 @@
 from rest_framework import generics,status,viewsets,mixins
 from rest_framework.response import Response
 from .. import models
-from ..permissions import AdminPermission,StaffLevelPermission,IsTokenValid,ReadOnlyStaffPermission
+from ..permissions import AdminPermission,StaffLevelPermission,IsTokenValid,ReadOnlyStaffPermission,ReadOnlyStudentPermission
 from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema,OpenApiParameter,OpenApiExample
@@ -20,7 +20,7 @@ class StaffSingleView(generics.RetrieveUpdateAPIView):
         return staff
     
     def patch(self, request):
-        data = request.data
+        data = request.data.copy()
         staff = self.get_object()
         if data.get('user') is not None:
             return Response(data={"message":"Account credentials cannot be changed. Contact Administrator"},status=status.HTTP_200_OK)
@@ -89,7 +89,7 @@ class SubjectCreateView(viewsets.ModelViewSet):
         return self.serializer_class
     
     def create(self, request):
-        data = request.data
+        data = request.data.copy()
         user = request.user
         school = models.SchoolModel.objects.get(user=user)
          
@@ -128,7 +128,7 @@ class StudentCreateView(viewsets.ModelViewSet):
     def get_queryset(self):
         get_classroom = self.request.GET.get('classroom',None)
         if get_classroom is None:
-            students = models.StudentModel.objects.all()
+            students = self.queryset.all()
         else:
             students = models.StudentModel.objects.filter(classroom=get_classroom)
         for student in students:
@@ -136,7 +136,7 @@ class StudentCreateView(viewsets.ModelViewSet):
         return students
 
     def create(self, request):
-        data = request.data
+        data = request.data.copy()
         user = request.user
         school = models.SchoolModel.objects.get(user=user)
         data['school'] = school
@@ -163,7 +163,7 @@ class AttendanceView(viewsets.ModelViewSet):
         return self.serializer_class
     
     def create(self, request):
-        data = request.data
+        data = request.data.copy()
         user = request.user
         try:
           school = models.SchoolModel.objects.get(user=user)
@@ -177,6 +177,56 @@ class AttendanceView(viewsets.ModelViewSet):
         if serializer.is_valid():
             serializer.save()
             response = {"message": "Attendance Marked Successfully", "data": serializer.data}
+            return Response(data=response,status=status.HTTP_201_CREATED)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+    
+class ExamView(viewsets.ModelViewSet):
+    serializer_class = serializers.ExamCreateSerializer 
+    permission_classes = [IsAuthenticated & (StaffLevelPermission | AdminPermission) & IsTokenValid]
+    queryset = models.ExamModel.objects.all()
+    
+    def get_serializer_class(self):
+        if self.action=='list':
+            return serializers.ExamListSerializer
+        return self.serializer_class
+    
+    def get_queryset(self):
+        get_classroom = self.request.GET.get('classroom',None)
+        if get_classroom is None:
+            exams = self.queryset.all()
+        else:
+            exams = models.ExamModel.objects.filter(classroom=get_classroom)
+        return exams
+    
+    
+    def create(self, request):
+      data = request.data.copy()
+      serializer = self.serializer_class(data=data)
+      if serializer.is_valid():
+            serializer.save()
+            response = {"message": "Exam Added Successfully", "data": serializer.data}
+            return Response(data=response,status=status.HTTP_201_CREATED)
+      return Response(data=serializer.errors,status=status.HTTP_200_OK) 
+  
+class ResultView(viewsets.ModelViewSet):
+    serializer_class = serializers.ResultSerializer
+    permission_classes = [IsAuthenticated & (StaffLevelPermission | AdminPermission | ReadOnlyStudentPermission) & IsTokenValid]
+    queryset = models.ResultModel.objects.all()
+    
+    def get_queryset(self):
+        get_student = self.request.GET.get('student',None)
+        if get_student is None:
+            results = self.queryset.all()
+        else:
+            results = models.ResultModel.objects.filter(student=get_student)
+        return results
+    
+    def create(self, request):
+        data = request.data.copy()
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            response = {"message": "Result Added Successfully", "data": serializer.data}
             return Response(data=response,status=status.HTTP_201_CREATED)
         return Response(data=serializer.errors,status=status.HTTP_200_OK)
 

@@ -34,6 +34,10 @@ class StudentLevelPermission(permissions.BasePermission):
 class ReadOnlyStaffPermission(StaffLevelPermission):
      def has_permission(self, request, view):
         return ((view.action == 'list' or view.action=='retrieve') and super(ReadOnlyStaffPermission, self).has_permission(request, view))
+    
+class ReadOnlyStudentPermission(StudentLevelPermission):
+     def has_permission(self, request, view):
+        return ((view.action == 'list' or view.action=='retrieve') and super(ReadOnlyStudentPermission, self).has_permission(request, view))
 # class ActionBasedPermission(permissions.AllowAny):
 #     """
 #     Grant or deny access to a view, based on a mapping in view.action_permissions

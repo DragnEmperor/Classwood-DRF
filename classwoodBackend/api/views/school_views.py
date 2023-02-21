@@ -14,7 +14,7 @@ class SchoolSignUpView(generics.CreateAPIView):
     serializer_class = serializers.SchoolSignUpSerializer
     permission_classes = []
     def post(self, request: Request):  
-        data = request.data
+        data = request.data.copy()
         serializer = self.serializer_class(data=data)
 
         if serializer.is_valid():
@@ -34,7 +34,7 @@ class SchoolProfileView(generics.RetrieveUpdateAPIView):
         return school
     
     def patch(self,request):
-        data = request.data
+        data = request.data.copy()
         school = self.get_object()
         serializer = self.serializer_class(school,data=data,partial=True)
         if serializer.is_valid():
@@ -67,7 +67,7 @@ class StaffView(viewsets.ModelViewSet):
         return Response(status=204)
     
     def create(self,request):
-        data = request.data
+        data = request.data.copy()
         user = request.user
         school = models.SchoolModel.objects.get(user=user)
         data['school'] = school
@@ -101,7 +101,7 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
         return Response(status=204)
     
     def create(self,request):
-        data = request.data
+        data = request.data.copy()
         user = request.user
         school = models.SchoolModel.objects.get(user=user)
         data['school'] = school
@@ -122,10 +122,9 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
         return Response(data=serializer.errors,status=status.HTTP_200_OK)
     
 class NoticeView(viewsets.ModelViewSet):
-    serializer_class = serializers.NoticeSerializer
+    serializer_class = serializers.NoticeCreateSerializer
     permission_classes = [IsAuthenticated & (ReadOnlyStaffPermission | AdminPermission) & IsTokenValid]
     queryset = models.Notice.objects.all()
-    parser_classes = (MultiPartParser, FormParser,JSONParser)
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -133,7 +132,7 @@ class NoticeView(viewsets.ModelViewSet):
         return self.serializer_class
     
     def get_object(self):
-        notice = super().get_object()
+        notice = super().get_object() 
         studentuser = None
         try:
          studentuser = models.StudentModel.objects.get(user = self.request.user)
@@ -150,7 +149,10 @@ class NoticeView(viewsets.ModelViewSet):
         return notice
     
     def create(self, request):
-        data = request.data
+        data = request.data.copy()
+        user = request.user
+        school = models.SchoolModel.objects.get(user=user)
+        data['school'] = school
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
