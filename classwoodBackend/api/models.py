@@ -117,7 +117,7 @@ class StaffModel(models.Model):
     # Personal Information
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
-    date_of_birth = models.DateField(auto_now_add=True)
+    date_of_birth = models.DateField()
     gender = models.CharField(max_length=1, choices=GENDER_CHOICE)
     mobile_number = models.CharField(validators=[mobile_regex], max_length=13)
     contact_email = models.EmailField(null=True, blank=True)
@@ -229,6 +229,7 @@ class StudentModel(models.Model):
     parent_mobile_number = models.CharField(
         validators=[mobile_regex], max_length=13, blank=True
     )
+    parent_account_no = models.CharField(max_length=100)
 
     # School Information
     date_of_admission = models.DateField()

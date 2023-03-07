@@ -9,6 +9,7 @@ from drf_spectacular.types import OpenApiTypes
 from .. import serializers
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+import csv
 
 class StaffSingleView(generics.RetrieveUpdateAPIView):
     serializer_class = serializers.StaffListSerializer
@@ -136,20 +137,80 @@ class StudentCreateView(viewsets.ModelViewSet):
         return students
 
     def create(self, request):
-        data = request.data.copy()
-        user = request.user
-        school = models.SchoolModel.objects.get(user=user)
-        data['school'] = school
-        subjects = data.get('subjects')
-        for subject in subjects:
-            if not models.Subject.objects.filter(classroom=data.get('classroom'),id=subject).exists():
-                return Response(data={"message": "Subject(s) not found in classroom"},status=status.HTTP_400_BAD_REQUEST)
-        serializer = self.serializer_class(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            response = {"message": "Student Created Successfully", "data": serializer.data}
-            return Response(data=response,status=status.HTTP_201_CREATED)
-        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+        csv_file = request.FILES.get('csv_file',None)
+        data = {}
+        errors=[]
+        if csv_file:
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            reader = csv.DictReader(decoded_file)
+            for row_num, row in enumerate(reader, 1):
+               if not all(row.values()):
+                    break
+               data['first_name'] = row.get('First Name',None)
+               data['last_name'] = row.get('Last Name',None)
+               data['father_name'] = row.get('Father Name',None)
+               data['mother_name'] = row.get('Mother Name',None)
+               data['date_of_birth'] = row.get('DOB',None)
+               data['gender'] = '1' if row.get('Gender',None)=='M' else '2' if row.get('Gender',None)=='F' else '3'
+               data['contact_email'] = row.get('Email',None)
+               data['parent_mobile_number'] = row.get('Mobile',None)
+               data['address'] = row.get('Address',None)
+               data['roll_no'] = row.get('Roll No',None)
+               data['admission_no'] = row.get('Admission No',None)
+               data['parent_account_no'] = row.get('Account_no',None)
+               data['date_of_admission'] = row.get('Date of Admission',None)
+               className = row.get('Class',None)
+               section = row.get('Section',None)
+               classroom = models.ClassroomModel.objects.get(class_name=className,section_name=section)
+               data['classroom'] = classroom.id
+               school = models.SchoolModel.objects.get(user=request.user)
+               data['school'] = school
+               get_subjects = row.get('Subject',None)
+               subjects=[]
+               if get_subjects is not None:
+                 get_subjects = get_subjects.split(',')
+                 for s in get_subjects:
+                   try:
+                     subject = models.Subject.objects.get(name=s,classroom=classroom)
+                     subjects.append(subject.id)
+                   except models.Subject.DoesNotExist:
+                        errors.append({
+                        'row': row_num,
+                        'errors': {"Subject(s) not found in classroom"}
+                    })
+               else:
+                   subjects = models.Subject.objects.filter(classroom=classroom).values_list('id',flat=True)
+               data['subjects'] = subjects
+               serializer = self.serializer_class(data=data)
+               if serializer.is_valid():
+                   serializer.save()
+                   pass
+               else:
+                   errors.append({
+                        'row': row_num,
+                        'errors': serializer.errors
+                    })
+            if errors:  
+                return Response(data=errors,status=status.HTTP_200_OK)
+            else:
+                return Response(data={"message":"Student Added from CSV Successfully"},status=status.HTTP_201_CREATED)
+        else:
+           data = request.data.copy()
+           school = models.SchoolModel.objects.get(user=request.user)
+           data['school'] = school
+           subjects = data.get('subjects')
+           if subjects is not None:
+            for subject in subjects:
+              if not models.Subject.objects.filter(classroom=data.get('classroom'),id=subject).exists():
+                return Response(data={"message": "Subject(s) not found in classroom"},status=status.HTTP_200_BAD_REQUEST)
+           else:
+               subjects = models.Subject.objects.filter(classroom=data.get('classroom')).values_list('id',flat=True)
+           serializer = self.serializer_class(data=data)
+           if serializer.is_valid():
+             serializer.save()
+             response = {"message": "Student Created Successfully", "data": serializer.data}
+             return Response(data=response,status=status.HTTP_201_CREATED)
+           return Response(data=serializer.errors,status=status.HTTP_200_OK)
     
     
 class AttendanceView(viewsets.ModelViewSet):

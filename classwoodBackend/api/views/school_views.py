@@ -6,7 +6,7 @@ from rest_framework.request import Request
 from ..permissions import AdminPermission,StaffLevelPermission,IsTokenValid,ReadOnlyStaffPermission
 from rest_framework.permissions import IsAuthenticated
 from .. import models
-import json
+import json,csv
 from django.core.serializers import serialize
 from rest_framework.parsers import MultiPartParser,FormParser,JSONParser
 
@@ -67,17 +67,50 @@ class StaffView(viewsets.ModelViewSet):
         return Response(status=204)
     
     def create(self,request):
-        data = request.data.copy()
-        user = request.user
-        school = models.SchoolModel.objects.get(user=user)
-        data['school'] = school
-        serializer = self.serializer_class(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            response = {"message": "Staff Created Successfully", "data": serializer.data}
-            return Response(data=response,status=status.HTTP_201_CREATED)
-        
-        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+        csv_file = request.FILES.get('csv_file',None)
+        data = {}
+        errors=[]
+        if csv_file:
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            reader = csv.DictReader(decoded_file)
+            for row_num, row in enumerate(reader, 1):
+               if not all(row.values()):
+                    break
+               data['first_name'] = row.get('First Name',None)
+               data['last_name'] = row.get('Last Name',None)
+               data['date_of_birth'] = row.get('DOB',None)
+               data['gender'] = '1' if row.get('Gender',None)=='M' else '2' if row.get('Gender',None)=='F' else '3'
+               data['contact_email'] = row.get('Email',None)
+               data['mobile_number'] = row.get('Mobile',None)
+               data['address'] = row.get('Address',None)
+               data['account_no'] = row.get('Account_no',None)
+               data['date_of_joining'] = row.get('Date of Joining',None)
+               school = models.SchoolModel.objects.get(user=request.user)
+               data['school'] = school
+               serializer = self.serializer_class(data=data)
+               if serializer.is_valid():
+                   serializer.save()
+                   pass
+               else:
+                   errors.append({
+                        'row': row_num,
+                        'errors': serializer.errors
+                    })
+            if errors:  
+                return Response(data=errors,status=status.HTTP_200_OK)
+            else:
+                return Response(data={"message":"Staff Added from CSV Successfully"},status=status.HTTP_201_CREATED)
+        else:
+           data = request.data.copy()
+           school = models.SchoolModel.objects.get(user=request.user)
+           data['school'] = school
+           serializer = self.serializer_class(data=data)
+           if serializer.is_valid():
+             serializer.save()
+             response = {"message": "Staff Created Successfully", "data": serializer.data}
+             return Response(data=response,status=status.HTTP_201_CREATED)
+           return Response(data=serializer.errors,status=status.HTTP_200_OK)
+       
     
 class ClassroomSchoolView(viewsets.ModelViewSet):
     serializer_class = serializers.ClassroomCreateSerializer
