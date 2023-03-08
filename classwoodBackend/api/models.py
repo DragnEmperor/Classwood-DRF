@@ -42,7 +42,7 @@ def subject_profile_upload(instance, filename):
 def notice_attach_upload(instance, filename):
     ext = filename.split(".")[-1]
     file_title = os.path.splitext(filename)[0]
-    generated_name = f"schools/{instance.school.school_name}/notices/{file_title}_{uuid4().hex}.{ext}"
+    generated_name = f"schools/{instance.school.school_name}/{instance.attachType}/{file_title}_{uuid4().hex}.{ext}"
     return generated_name
 
 # ACCOUNTS, AUTH RELATED MODELS
@@ -156,7 +156,7 @@ class ClassroomModel(models.Model):
     section_name = models.CharField(max_length=1)
     class_teacher = models.ForeignKey(StaffModel, on_delete=models.SET_NULL,null=True)
     sub_class_teacher = models.ForeignKey(StaffModel, on_delete=models.SET_NULL, related_name="sub_class_teacher", null=True, blank=True)
-    
+    teachers = models.ManyToManyField(StaffModel,related_name='teachers_of_class',blank=True)
     # Subject Information
     # subjects = models.ManyToManyField(Subject, related_name="class_map")
 
@@ -319,6 +319,7 @@ class Notice(models.Model):
 
 class Attachment(models.Model):
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+    attachType = models.CharField(max_length=50, null=True, blank=True)
     fileName = models.FileField(upload_to=notice_attach_upload, null=True, blank=True)
     
     def __str__(self):
@@ -376,6 +377,7 @@ class ExamModel(models.Model):
 
     class Meta:
         ordering = ["-date_of_exam"]
+        unique_together = ("school", "classroom", "subject","date_of_exam")
 
     def __str__(self):
         return f"{self.subject.name}_{self.tag}"

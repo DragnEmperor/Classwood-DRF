@@ -66,6 +66,15 @@ class StaffCreateSerializer(serializers.ModelSerializer):
         return models.StaffModel.objects.create(user=models.Accounts.objects.create_user(**user_data),**validated_data)
 
 class ClassroomCreateSerializer(serializers.ModelSerializer):
+    
+    def create(self, validated_data):
+        teachers = []
+        teachers.append(validated_data.get('class_teacher'))
+        teachers.append(validated_data.get('sub_class_teacher'))
+        classroom = models.ClassroomModel.objects.create(**validated_data)
+        classroom.teachers.set(teachers)
+        return classroom
+    
     class Meta:
         model = models.ClassroomModel
         fields = "__all__"
@@ -115,7 +124,7 @@ class NoticeCreateSerializer(serializers.ModelSerializer):
           attachments = validated_data.pop('attachments')
         notice = models.Notice.objects.create(**validated_data)
         for attach in attachments:
-            attachment = models.Attachment.objects.create(fileName=attach,school = validated_data.get('author'))
+            attachment = models.Attachment.objects.create(fileName=attach,school = validated_data.get('author'),attachType='notice')
             notice.attachments.add(attachment)
         return notice
     
@@ -142,11 +151,17 @@ class StaffListSerializer(serializers.ModelSerializer):
         fields = "__all__"
         
 class SubjectCreateSerializer(serializers.ModelSerializer):
+    
+    def create(self, validated_data):
+        teacher = validated_data.get('teacher')
+        classroom = validated_data.get('classroom')
+        classroom.teachers.add(teacher)
+        return models.Subject.objects.create(**validated_data)
+    
     class Meta:
         model = models.Subject
         fields = "__all__" 
         
-
 class StudentCreateSerializer(serializers.ModelSerializer):
     user = AccountSerializer(required=False)
     class Meta:
@@ -204,7 +219,7 @@ class ExamCreateSerializer(serializers.ModelSerializer):
           attachments = validated_data.pop('attachments')
         exam = models.ExamModel.objects.create(**validated_data)
         for attach in attachments:
-            attachment = models.Attachment.objects.create(fileName=attach,school = validated_data.get('school'))
+            attachment = models.Attachment.objects.create(fileName=attach,school = validated_data.get('school'),attachType='exam')
             exam.attachments.add(attachment)
         return exam
     
@@ -215,6 +230,14 @@ class ExamListSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
 class ResultSerializer(serializers.ModelSerializer):
+    
+    def validate(self, attrs):
+        if(attrs.get('score') > (attrs.get('exam')).max_marks):
+            res = ValidationError('Marks Obtained cannot be greater than Max Marks')
+            res.status_code = 200
+            raise res
+        return attrs
+        
     class Meta:
         model = models.ResultModel
         fields = "__all__"

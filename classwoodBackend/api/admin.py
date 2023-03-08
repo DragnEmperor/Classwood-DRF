@@ -38,4 +38,6 @@ admin.site.register(models.StudentModel,StudentAdmin)
 admin.site.register(models.Attendance,AttendanceAdmin)
 admin.site.register(models.Notice)
 admin.site.register(models.Attachment)
+admin.site.register(models.ExamModel)
+admin.site.register(models.ResultModel)
 # Register your models here.

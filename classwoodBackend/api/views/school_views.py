@@ -143,12 +143,12 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
         class_teacher = models.StaffModel.objects.get(user=class_teacher_account)
         if class_teacher.is_class_teacher == True:
             return Response(data={"message":"Class Teacher Already Assigned"},status=status.HTTP_200_OK)
-        models.StaffModel.objects.filter(user=class_teacher_account).update(is_class_teacher=True)
         data['class_teacher'] = class_teacher
         data['sub_class_teacher'] = models.StaffModel.objects.get(user=sub_teacher_account)
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
+            models.StaffModel.objects.filter(user=class_teacher_account).update(is_class_teacher=True)
             response = {"message": "Classroom Created Successfully", "data": serializer.data}
             return Response(data=response,status=status.HTTP_201_CREATED)
         

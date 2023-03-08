@@ -1,29 +1,30 @@
 from django.urls import path,include
-from .views.school_views import SchoolSignUpView,StaffView,ClassroomSchoolView,SchoolProfileView,NoticeView
-from .views.staff_views import StaffSingleView,ClassroomStaffView,SubjectCreateView,StudentCreateView,AttendanceView
+from .views import staff_views,school_views
 from .views.general_views import LoginView,LogoutView
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
 router = DefaultRouter()
-router.register('staff', StaffView)
-router.register('classroom', ClassroomSchoolView)
-router.register('notice', NoticeView)
+router.register('staff', school_views.StaffView)
+router.register('classroom', school_views.ClassroomSchoolView)
+router.register('notice', school_views.NoticeView)
 
 router2 = DefaultRouter()
-router2.register('classroom', ClassroomStaffView)
-router2.register('subject', SubjectCreateView)
-router2.register('student', StudentCreateView)
-router2.register('attendance', AttendanceView)
+router2.register('classroom', staff_views.ClassroomStaffView)
+router2.register('subject', staff_views.SubjectCreateView)
+router2.register('student', staff_views.StudentCreateView)
+router2.register('attendance', staff_views.AttendanceView)
+router2.register('exam', staff_views.ExamView)
+router2.register('result', staff_views.ResultView)
 
 urlpatterns = [
-    path("signup/",SchoolSignUpView.as_view(),name="school_signup"),
+    path("signup/",school_views.SchoolSignUpView.as_view(),name="school_signup"),
     path('login/', LoginView.as_view(), name='token_obtain_pair'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('refresh-token/', TokenRefreshView.as_view(), name='token_refresh'),
-    path("account/",SchoolProfileView.as_view(),name="school_profile"),
+    path("account/",school_views.SchoolProfileView.as_view(),name="school_profile"),
     # path("staff/create",StaffCreateView.as_view(),name="staff_signup"),
     path("list/",include(router.urls),name="viewset_views_lists"),
-    path("staff/me",StaffSingleView.as_view(),name="staff_profile"),
+    path("staff/me",staff_views.StaffSingleView.as_view(),name="staff_profile"),
     path("staff/",include(router2.urls),name="staff_classroom_list"),
 ]

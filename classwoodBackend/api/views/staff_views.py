@@ -91,13 +91,10 @@ class SubjectCreateView(viewsets.ModelViewSet):
     
     def create(self, request):
         data = request.data.copy()
-        user = request.user
-        school = models.SchoolModel.objects.get(user=user)
-         
+        school = models.SchoolModel.objects.get(user=request.user)
         # code for getting school of staff (if teacher creates subject)
         # if models.StaffModel.objects.filter(user=user).exists():
         #     school = models.StaffModel.objects.get(user=user).school
-        
         data['school'] = school
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
@@ -143,6 +140,7 @@ class StudentCreateView(viewsets.ModelViewSet):
         if csv_file:
             decoded_file = csv_file.read().decode('utf-8').splitlines()
             reader = csv.DictReader(decoded_file)
+            classroom = request.data.get('classroom',None)
             for row_num, row in enumerate(reader, 1):
                if not all(row.values()):
                     break
@@ -159,9 +157,13 @@ class StudentCreateView(viewsets.ModelViewSet):
                data['admission_no'] = row.get('Admission No',None)
                data['parent_account_no'] = row.get('Account_no',None)
                data['date_of_admission'] = row.get('Date of Admission',None)
-               className = row.get('Class',None)
-               section = row.get('Section',None)
-               classroom = models.ClassroomModel.objects.get(class_name=className,section_name=section)
+               try:
+                  if classroom is None:
+                    className = row.get('Class',None)
+                    section = row.get('Section',None)
+                    classroom = models.ClassroomModel.objects.get(class_name=className,section_name=section)
+               except models.ClassroomModel.DoesNotExist:
+                  return Response(data={"message":"Classroom not found"},status=status.HTTP_400_BAD_REQUEST)
                data['classroom'] = classroom.id
                school = models.SchoolModel.objects.get(user=request.user)
                data['school'] = school
@@ -262,6 +264,8 @@ class ExamView(viewsets.ModelViewSet):
     
     def create(self, request):
       data = request.data.copy()
+      school = models.SchoolModel.objects.get(user=request.user)
+      data['school'] = school
       serializer = self.serializer_class(data=data)
       if serializer.is_valid():
             serializer.save()
@@ -283,13 +287,54 @@ class ResultView(viewsets.ModelViewSet):
         return results
     
     def create(self, request):
-        data = request.data.copy()
-        serializer = self.serializer_class(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            response = {"message": "Result Added Successfully", "data": serializer.data}
-            return Response(data=response,status=status.HTTP_201_CREATED)
-        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+        csv_file = request.FILES.get('csv_file',None)
+        if csv_file:
+            data = {}
+            errors=[]
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            reader = csv.DictReader(decoded_file)
+            classroom = request.data.get('classroom',None)
+            for row_num, row in enumerate(reader, 1):
+               if not all(row.values()):
+                    break
+            #    name = row.get('First Name',None) + row.get('Last Name',None)
+               rollNo = row.get('Roll No',None)
+               school = models.SchoolModel.objects.get(user=request.user)
+               if classroom is None :
+                  className = row.get('Class',None) + row.get('Section')
+                  classroom = models.ClassroomModel.objects.get(class_name=className,school=school)
+               student = models.StudentModel.objects.get(roll_no=rollNo,classroom=classroom)
+               if models.StaffModel.objects.filter(user=self.request.user).exists():
+                   teacher = models.StaffModel.objects.get(user=request.user)
+                   if teacher not in classroom.teachers.all():
+                       return Response(data={"message": "Teacher not assigned to classroom"},status=status.HTTP_200_OK)
+               data['school'] = school
+               data['exam'] = request.data.get('exam')
+               data['student'] = student
+               data['score'] = row.get('Marks',None)
+               serializer = self.serializer_class(data=data)
+               if serializer.is_valid():
+                   serializer.save()
+                   pass
+               else:
+                   errors.append({
+                        'row': row_num,
+                        'errors': serializer.errors
+                    })
+            if errors:  
+                return Response(data=errors,status=status.HTTP_200_OK)
+            else:
+                return Response(data={"message":"Result Added from CSV Successfully"},status=status.HTTP_201_CREATED)
+        else:
+           data = request.data.copy()
+           school = models.SchoolModel.objects.get(user=request.user)
+           data['school'] = school
+           serializer = self.serializer_class(data=data)
+           if serializer.is_valid():
+             serializer.save()
+             response = {"message": "Result Created Successfully", "data": serializer.data}
+             return Response(data=response,status=status.HTTP_201_CREATED)
+           return Response(data=serializer.errors,status=status.HTTP_200_OK)
 
     
     
