@@ -83,6 +83,7 @@ class ClassroomListSerializer(serializers.ModelSerializer):
     strength = serializers.CharField()
     no_of_subjects = serializers.SerializerMethodField()
     no_of_teachers = serializers.SerializerMethodField()
+    teachers = serializers.StringRelatedField(many=True)
     
     class Meta:
         model = models.ClassroomModel
@@ -93,6 +94,7 @@ class ClassroomListSerializer(serializers.ModelSerializer):
     
     def get_no_of_teachers(self,obj):
         return str(obj.no_of_teachers)
+    
         
 class SubjectListSerializer(serializers.ModelSerializer):
     classroom = serializers.StringRelatedField()

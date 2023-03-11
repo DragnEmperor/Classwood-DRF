@@ -177,15 +177,7 @@ class ClassroomModel(models.Model):
     
     @property
     def no_of_teachers(self):
-        subjects = Subject.objects.filter(classroom=self.id)
-        unique_teachers = subjects.order_by().values_list('teacher', flat=True).distinct()
-        count=2
-        for teacher in unique_teachers:
-            if teacher == self.sub_class_teacher.user.id or teacher == self.class_teacher.user.id:
-                continue
-            if StaffModel.objects.filter(user=teacher).exists():
-              count += 1
-        return count
+        return  self.teachers.all().count()
     
 
 # add, if required, code for setting onDelete to models.SET() to class teacher

@@ -138,7 +138,7 @@ class StudentCreateView(viewsets.ModelViewSet):
         data = {}
         errors=[]
         if csv_file:
-            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            decoded_file = csv_file.read().decode('utf-8-sig').splitlines()
             reader = csv.DictReader(decoded_file)
             classroom = request.data.get('classroom',None)
             for row_num, row in enumerate(reader, 1):
@@ -162,12 +162,14 @@ class StudentCreateView(viewsets.ModelViewSet):
                     className = row.get('Class',None)
                     section = row.get('Section',None)
                     classroom = models.ClassroomModel.objects.get(class_name=className,section_name=section)
+                    data['classroom'] = classroom.id
+                  else:
+                    data['classroom'] = classroom
                except models.ClassroomModel.DoesNotExist:
                   return Response(data={"message":"Classroom not found"},status=status.HTTP_400_BAD_REQUEST)
-               data['classroom'] = classroom.id
                school = models.SchoolModel.objects.get(user=request.user)
                data['school'] = school
-               get_subjects = row.get('Subject',None)
+               get_subjects = row.get('Subjects',None)
                subjects=[]
                if get_subjects is not None:
                  get_subjects = get_subjects.split(',')
