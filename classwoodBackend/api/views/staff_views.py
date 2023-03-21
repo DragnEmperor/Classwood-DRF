@@ -9,6 +9,7 @@ from drf_spectacular.types import OpenApiTypes
 from .. import serializers
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from ..utils import generate_staff_user
 import csv
 
 class StaffSingleView(generics.RetrieveUpdateAPIView):
@@ -37,6 +38,11 @@ class ClassroomStaffView(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.ClassroomCreateSerializer
     permission_classes = [IsAuthenticated & (StaffLevelPermission | AdminPermission) & IsTokenValid]
     queryset = models.ClassroomModel.objects.all()
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return serializers.ClassroomListSerializer
+        return self.serializer_class
     
     def get_queryset(self):
         # # for displaying all classrooms to class-teachers and sub-class-teachers
@@ -122,6 +128,26 @@ class StudentCreateView(viewsets.ModelViewSet):
         student = get_object_or_404(models.Accounts, id=id)
         student.delete()
         return Response(status=204)
+    
+    def partial_update(self, request,*args,**kwargs):
+        id=self.kwargs['pk']
+        data=request.data.copy()
+        student = self.get_object()
+        f_name = data.get('first_name',student.first_name)  
+        pm = data.get('parent_mobile_number',student.parent_mobile_number)
+        doa = data.get('date_of_admission',student.date_of_admission)  
+        if f_name != student.first_name or pm != student.parent_mobile_number or doa != student.date_of_admission:
+            newAccount = generate_staff_user(f_name,pm,doa)
+            user = student.user
+            user.email = newAccount['email']
+            user.set_password(newAccount['password'])
+            user.save() 
+        serializer = self.get_serializer(student, data=data, partial=True)
+        if serializer.is_valid():
+            self.perform_update(serializer)
+            return Response(data=serializer.data,status=status.HTTP_200_OK)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+        
     
     def get_queryset(self):
         get_classroom = self.request.GET.get('classroom',None)
