@@ -176,18 +176,32 @@ class StudentListSerializer(serializers.ModelSerializer):
     def get_month_attendance(self, obj):
         return str(obj.get_month_attendance)
     
-class AttendanceSerializer(serializers.ModelSerializer):
+class StudentAttendanceSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Attendance
+        model = models.StudentAttendance
         fields = "__all__"
         
         
-class AttendanceListSerializer(serializers.ModelSerializer):
+class StudentAttendanceListSerializer(serializers.ModelSerializer):
     student = serializers.StringRelatedField()
     classroom = serializers.StringRelatedField()
     school = serializers.StringRelatedField()
     class Meta:
-        model = models.Attendance
+        model = models.StudentAttendance
+        fields = "__all__"
+        
+class StaffAttendanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.StaffAttendance
+        fields = "__all__"
+        
+        
+class StaffAttendanceListSerializer(serializers.ModelSerializer):
+    staff = serializers.StringRelatedField()
+    classroom = serializers.StringRelatedField()
+    school = serializers.StringRelatedField()
+    class Meta:
+        model = models.StaffAttendance
         fields = "__all__"
 
 

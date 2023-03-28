@@ -261,14 +261,14 @@ class StudentCreateView(viewsets.ModelViewSet):
            return Response(data=serializer.errors,status=status.HTTP_200_OK)
     
     
-class AttendanceView(viewsets.ModelViewSet):
-    serializer_class = serializers.AttendanceSerializer
+class StudentAttendanceView(viewsets.ModelViewSet):
+    serializer_class = serializers.StudentAttendanceSerializer
     permission_classes = [IsAuthenticated & (StaffLevelPermission | AdminPermission) & IsTokenValid]
-    queryset = models.Attendance.objects.all()
+    queryset = models.StudentAttendance.objects.all()
     
     def get_serializer_class(self):
         if self.action=='list':
-            return serializers.AttendanceListSerializer
+            return serializers.StudentAttendanceListSerializer
         return self.serializer_class
     
     def get_queryset(self):
@@ -279,9 +279,9 @@ class AttendanceView(viewsets.ModelViewSet):
         except models.SchoolModel.DoesNotExist:
           school = (models.StaffModel.objects.get(user=user)).school
         if get_classroom is None:
-            attendance = models.Attendance.objects.filter(school=school)
+            attendance = models.StudentAttendance.objects.filter(school=school)
         else:
-            attendance = models.ExamModel.objects.filter(classroom=get_classroom,school=school)
+            attendance = models.StaffAttendance.objects.filter(classroom=get_classroom,school=school)
         return attendance
     
     def create(self, request):
@@ -298,7 +298,7 @@ class AttendanceView(viewsets.ModelViewSet):
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
-            response = {"message": "Attendance Marked Successfully", "data": serializer.data}
+            response = {"message": "Student Attendance Marked Successfully", "data": serializer.data}
             return Response(data=response,status=status.HTTP_201_CREATED)
         return Response(data=serializer.errors,status=status.HTTP_200_OK)
     

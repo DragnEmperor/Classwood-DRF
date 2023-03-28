@@ -250,7 +250,7 @@ class StudentModel(models.Model):
     
     @property
     def get_attendance(self):
-        att = Attendance.objects.filter(student=self.user.id).values("present")
+        att = StudentAttendance.objects.filter(student=self.user.id).values("present")
         if not att:
             return 100
         return att.filter(present=True).count() / att.count() * 100
@@ -260,7 +260,7 @@ class StudentModel(models.Model):
         att_lst = [
             0 for _ in range(monthrange(timezone.now().year, timezone.now().month)[1])
         ]
-        att = Attendance.objects.filter(
+        att = StudentAttendance.objects.filter(
             student=self.user.id, date__gte=timezone.now().replace(day=1)
         )
         for i in att:
@@ -269,7 +269,7 @@ class StudentModel(models.Model):
         return json.dumps(att_lst) 
     
 # ATTENDANCE RELATED MODEL
-class Attendance(models.Model):
+class StudentAttendance(models.Model):
     student = models.ForeignKey(StudentModel, on_delete=models.CASCADE)
     date = models.DateField(default=timezone.now)
     present = models.BooleanField(default=False)
@@ -277,13 +277,31 @@ class Attendance(models.Model):
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
 
     class Meta:
-        verbose_name = "Attendance"
-        verbose_name_plural = "Attendance"
+        verbose_name = "StudentAttendance"
+        verbose_name_plural = "StudentAttendance"
         indexes = [
             models.Index(fields=["student", "date"]),
         ]
         ordering = ["-date"]
         unique_together = ["student", "date"]
+
+    def __str__(self):
+        return self.student.user.email
+    
+class StaffAttendance(models.Model):
+    staff = models.ForeignKey(StaffModel, on_delete=models.CASCADE)
+    date = models.DateField(default=timezone.now)
+    present = models.BooleanField(default=False)
+    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = "StaffAttendance"
+        verbose_name_plural = "StaffAttendance"
+        indexes = [
+            models.Index(fields=["staff", "date"]),
+        ]
+        ordering = ["-date"]
+        unique_together = ["staff", "date"]
 
     def __str__(self):
         return self.student.user.email

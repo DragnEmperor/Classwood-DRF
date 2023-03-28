@@ -203,6 +203,39 @@ class NoticeView(viewsets.ModelViewSet):
             return Response(data=response,status=status.HTTP_201_CREATED)
         return Response(data=serializer.errors,status=status.HTTP_200_OK)
     
+class StaffAttendanceView(viewsets.ModelViewSet):
+    serializer_class = serializers.StaffAttendanceSerializer
+    queryset = models.StaffAttendance.objects.all()
+    permission_classes = [IsAuthenticated & AdminPermission & IsTokenValid]
+    
+    def get_serializer_class(self):
+        if self.action=='list':
+            return serializers.StaffAttendanceListSerializer
+        return self.serializer_class
+    
+    def get_queryset(self):
+        user=self.request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
+          attendance = models.StaffAttendance.objects.filter(classroom=get_classroom,school=school)
+        return attendance
+    
+    def create(self, request):
+        data = request.data.copy()
+        user = request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          return Response(data={"message":"You are not a school admin"},status=status.HTTP_200_OK)
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            response = {"message": "Staff Attendance Marked Successfully", "data": serializer.data}
+            return Response(data=response,status=status.HTTP_201_CREATED)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+    
     
     
         

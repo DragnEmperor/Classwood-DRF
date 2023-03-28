@@ -24,9 +24,12 @@ class StudentAdmin(ModelAdmin):
     list_display = ("full_name","classroom","school")
     list_filter = ("classroom","subjects","school")
     
-class AttendanceAdmin(ModelAdmin):
+class StudentAttendanceAdmin(ModelAdmin):
     list_display = ("student","date","present",)
     list_filter = ("student","date","present",)
+class StaffAttendanceAdmin(ModelAdmin):
+    list_display = ("staff","date","present",)
+    list_filter = ("staff","date","present",)
         
 admin.site.register(models.SchoolModel,SchoolAdmin)
 admin.site.register(models.StaffModel,StaffAdmin)
@@ -35,9 +38,12 @@ admin.site.register(models.ClassroomModel,ClassroomAdmin)
 admin.site.register(models.BlackListedToken)
 admin.site.register(models.Subject,SubjectAdmin)
 admin.site.register(models.StudentModel,StudentAdmin)
-admin.site.register(models.Attendance,AttendanceAdmin)
+admin.site.register(models.StudentAttendance,StudentAttendanceAdmin)
+admin.site.register(models.StaffAttendance,StaffAttendanceAdmin)
 admin.site.register(models.Notice)
 admin.site.register(models.Attachment)
+admin.site.register(models.SyllabusModel)
 admin.site.register(models.ExamModel)
 admin.site.register(models.ResultModel)
+admin.site.register(models.TimeTableModel)
 # Register your models here.
