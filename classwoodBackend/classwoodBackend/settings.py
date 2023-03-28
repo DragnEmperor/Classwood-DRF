@@ -30,7 +30,7 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEVELOPMENT")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['pandu420.pythonanywhere.com','127.0.0.1']
 
 
 # Application definition
@@ -68,6 +68,11 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
 }
 
 SIMPLE_JWT = {

@@ -15,6 +15,7 @@ router2.register('student', staff_views.StudentCreateView)
 router2.register('attendance', staff_views.AttendanceView)
 router2.register('exam', staff_views.ExamView)
 router2.register('result', staff_views.ResultView)
+router2.register('syllabus', staff_views.SyllabusView)
 
 urlpatterns = [
     path("signup/",school_views.SchoolSignUpView.as_view(),name="school_signup"),

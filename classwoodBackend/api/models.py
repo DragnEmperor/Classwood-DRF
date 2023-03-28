@@ -138,6 +138,7 @@ class StaffModel(models.Model):
 
     @property
     def incharge_of(self):
+        print('test',ClassroomModel.objects.get(class_teacher=self.user.id))
         return ClassroomModel.objects.get(class_teacher=self.user.id)
     
     @property
@@ -233,7 +234,7 @@ class StudentModel(models.Model):
     classroom = models.ForeignKey(
         ClassroomModel, on_delete=models.SET_NULL, verbose_name="Class",null=True
     )
-    subjects = models.ManyToManyField(Subject, related_name="learning_subjects")
+    subjects = models.ManyToManyField(Subject, related_name="learning_subjects", blank=True)
     
 
     def __str__(self):
@@ -386,3 +387,40 @@ class ResultModel(models.Model):
 
     def __str__(self):
         return self.student.full_name
+    
+    
+class SyllabusModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    school = models.ForeignKey("SchoolModel", on_delete=models.CASCADE)
+    classroom = models.ForeignKey("ClassroomModel", on_delete=models.CASCADE)
+    subject = models.ForeignKey('Subject', on_delete=models.CASCADE)
+    attachments = models.ManyToManyField('Attachment',blank=True)
+    tag = models.CharField(max_length=50)
+    date_of_exam = models.DateField()
+
+    class Meta:
+        ordering = ["-date_of_exam"]
+        unique_together = ("school", "classroom", "subject","date_of_exam")
+
+    def __str__(self):
+        return f"{self.subject.name}_{self.tag}"
+    
+    
+class TimeTableModel(models.Model):
+    # id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    DAYS_OF_WEEK = (
+        ('Monday', 'Monday'),
+        ('Tuesday', 'Tuesday'),
+        ('Wednesday', 'Wednesday'),
+        ('Thursday', 'Thursday'),
+        ('Friday', 'Friday'),
+        ('Saturday', 'Saturday'),
+        # ('Sunday', 'Sunday')
+    )
+
+    classroom = models.ForeignKey('ClassroomModel', related_name='timetables', on_delete=models.CASCADE)
+    day = models.CharField(choices=DAYS_OF_WEEK, max_length=10)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    subject = models.ForeignKey('Subject', on_delete=models.CASCADE)
+    teacher = models.ForeignKey('StaffModel', on_delete=models.SET_NULL, null=True, blank=True)

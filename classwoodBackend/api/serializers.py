@@ -225,6 +225,39 @@ class ResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.ResultModel
         fields = "__all__"
+        
+class SyllabusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.SyllabusModel
+        fields = "__all__"
+        
+    def create(self, validated_data):
+        attachments = []
+        if 'attachments' in validated_data:
+          attachments = validated_data.pop('attachments')
+        syllabus = models.SyllabusModel.objects.create(**validated_data)
+        for attach in attachments:
+            attachment = models.Attachment.objects.create(fileName=attach,school = validated_data.get('school'),attachType='syllabus')
+            syllabus.attachments.add(attachment)
+        return syllabus
+    
+class SyllabusListSerializer(serializers.ModelSerializer):
+    attachments = serializers.StringRelatedField(many=True)
+    class Meta:
+        model = models.SyllabusModel
+        fields = '__all__'
+        
+class TimeTableSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.TimeTableModel
+        fields = "__all__"
+        
+        
+class TimeTableListSerializer(serializers.ModelSerializer):
+    subject = serializers.StringRelatedField()
+    classroom = serializers.StringRelatedField()
+    model = models.TimeTableModel
+    fields = "__all__"
          
 # class AuthTokenSerializer(serializers.Serializer):
 #     """

@@ -11,6 +11,8 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ..utils import generate_staff_user
 import csv
+from rest_framework.parsers import MultiPartParser,FormParser,JSONParser
+from django.http import QueryDict
 
 class StaffSingleView(generics.RetrieveUpdateAPIView):
     serializer_class = serializers.StaffListSerializer
@@ -78,16 +80,21 @@ class SubjectCreateView(viewsets.ModelViewSet):
     
     def get_queryset(self):
         get_classroom = self.request.GET.get('classroom',None)
+        user=self.request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
         teacher = models.StaffModel.objects.filter(user=self.request.user).exists()
         if not teacher and not get_classroom:
-            return models.Subject.objects.all()
+            return models.Subject.objects.filter(school=school)
         if get_classroom is not None:
-            return models.Subject.objects.filter(classroom=get_classroom)
+            return models.Subject.objects.filter(classroom=get_classroom,school=school)
         teacher = models.StaffModel.objects.get(user=self.request.user)
         classroom = models.ClassroomModel.objects.get(Q(class_teacher=teacher) | Q(sub_class_teacher=teacher))
         if str(get_classroom) == str(classroom.id):
-            return models.Subject.objects.filter(classroom=classroom)
-        subjects = models.Subject.objects.filter(teacher=teacher)
+            return models.Subject.objects.filter(classroom=classroom,school=school)
+        subjects = models.Subject.objects.filter(teacher=teacher,school=school)
         return subjects
     
     def get_serializer_class(self):
@@ -117,6 +124,7 @@ class StudentCreateView(viewsets.ModelViewSet):
     serializer_class = serializers.StudentCreateSerializer
     queryset = models.StudentModel.objects.all()
     permission_classes = [(ReadOnlyStaffPermission | AdminPermission) & IsAuthenticated & IsTokenValid]
+    parser_classes = [MultiPartParser,FormParser,JSONParser]
     
     def get_serializer_class(self):
         if self.action =='list':
@@ -151,10 +159,15 @@ class StudentCreateView(viewsets.ModelViewSet):
     
     def get_queryset(self):
         get_classroom = self.request.GET.get('classroom',None)
+        user = self.request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
         if get_classroom is None:
-            students = self.queryset.all()
+            students = models.StudentModel.objects.filter(school = school)
         else:
-            students = models.StudentModel.objects.filter(classroom=get_classroom)
+            students = models.StudentModel.objects.filter(classroom=get_classroom,school = school)
         for student in students:
             student.user.password = None
         return students
@@ -228,14 +241,19 @@ class StudentCreateView(viewsets.ModelViewSet):
            data = request.data.copy()
            school = models.SchoolModel.objects.get(user=request.user)
            data['school'] = school
-           subjects = data.get('subjects')
+           subjects = data.get('subjects',None)
            if subjects is not None:
             for subject in subjects:
               if not models.Subject.objects.filter(classroom=data.get('classroom'),id=subject).exists():
                 return Response(data={"message": "Subject(s) not found in classroom"},status=status.HTTP_200_BAD_REQUEST)
            else:
                subjects = models.Subject.objects.filter(classroom=data.get('classroom')).values_list('id',flat=True)
-           serializer = self.serializer_class(data=data)
+            #    subjects = [str(subject.id) for subject in models.Subject.objects.filter(classroom=data.get('classroom'))]
+           if(isinstance(request.data,QueryDict)):
+               data.setlist('subjects',subjects)
+           else:
+            data['subjects'] = subjects
+           serializer = self.get_serializer(data=data)
            if serializer.is_valid():
              serializer.save()
              response = {"message": "Student Created Successfully", "data": serializer.data}
@@ -252,6 +270,19 @@ class AttendanceView(viewsets.ModelViewSet):
         if self.action=='list':
             return serializers.AttendanceListSerializer
         return self.serializer_class
+    
+    def get_queryset(self):
+        get_classroom = self.request.GET.get('classroom',None)
+        user=self.request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
+        if get_classroom is None:
+            attendance = models.Attendance.objects.filter(school=school)
+        else:
+            attendance = models.ExamModel.objects.filter(classroom=get_classroom,school=school)
+        return attendance
     
     def create(self, request):
         data = request.data.copy()
@@ -283,10 +314,15 @@ class ExamView(viewsets.ModelViewSet):
     
     def get_queryset(self):
         get_classroom = self.request.GET.get('classroom',None)
+        user=self.request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
         if get_classroom is None:
-            exams = self.queryset.all()
+            exams = models.ExamModel.objects.filter(school = school)
         else:
-            exams = models.ExamModel.objects.filter(classroom=get_classroom)
+            exams = models.ExamModel.objects.filter(classroom = get_classroom,school = school)
         return exams
     
     
@@ -308,10 +344,12 @@ class ResultView(viewsets.ModelViewSet):
     
     def get_queryset(self):
         get_student = self.request.GET.get('student',None)
+        user = self.request.user
+        school = models.SchoolModel.objects.get(user=user)
         if get_student is None:
-            results = self.queryset.all()
+            results = results = models.ResultModel.objects.filter(student__school = school)
         else:
-            results = models.ResultModel.objects.filter(student=get_student)
+            results = models.ResultModel.objects.filter(student=get_student,student__school = school)
         return results
     
     def create(self, request):
@@ -363,14 +401,75 @@ class ResultView(viewsets.ModelViewSet):
              response = {"message": "Result Created Successfully", "data": serializer.data}
              return Response(data=response,status=status.HTTP_201_CREATED)
            return Response(data=serializer.errors,status=status.HTTP_200_OK)
+       
+       
+class TimeTableView(viewsets.ModelViewSet):
+    serializer_class = serializers.TimeTableSerializer
+    permission_classes = [IsAuthenticated & (ReadOnlyStaffPermission | AdminPermission) & IsTokenValid]
+    queryset = models.TimeTableModel.objects.all()
+    
+    def get_serializer_class(self):
+        if self.action=='list':
+            return serializers.TimeTableListSerializer
+        return self.serializer_class
+    
+    def get_queryset(self):
+        get_classroom = self.request.GET.get('classroom',None)
+        user = self.request.user
+        school = models.SchoolModel.objects.get(user=user)
+        if get_classroom is None:
+            timetable = models.TimeTableModel.objects.filter(school=school)
+        else:
+            timetable = models.TimeTableModel.objects.filter(classroom=get_classroom,school=school)
+        return timetable
+    
+    def create(self, request):
+        data = request.data.copy()
+        user = request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
+        data['school'] = school
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            response = {"message": "TimeTable Created Successfully", "data": serializer.data}
+            return Response(data=response,status=status.HTTP_201_CREATED)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+    
+class SyllabusView(viewsets.ModelViewSet):
+    serializer_class = serializers.SyllabusSerializer
+    permission_classes = [IsAuthenticated & (StaffLevelPermission | AdminPermission) & IsTokenValid]
+    queryset = models.SyllabusModel.objects.all()
+    
+    def get_serializer_class(self):
+        if self.action=='list':
+            return serializers.SyllabusListSerializer
+        return self.serializer_class
+    
+    def get_queryset(self):
+        get_classroom = self.request.GET.get('classroom',None)
+        user=self.request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
+        if get_classroom is None:
+            syllabus = models.SyllabusModel.objects.filter(school = school)
+        else:
+            syllabus = models.SyllabusModel.objects.filter(classroom = get_classroom,school = school)
+        return syllabus
+    
+    def create(self, request):
+      data = request.data.copy()
+      school = models.SchoolModel.objects.get(user=request.user)
+      data['school'] = school
+      serializer = self.serializer_class(data=data)
+      if serializer.is_valid():
+            serializer.save()
+            response = {"message": "Syllabus Added Successfully", "data": serializer.data}
+            return Response(data=response,status=status.HTTP_201_CREATED)
+      return Response(data=serializer.errors,status=status.HTTP_200_OK) 
 
     
-    
-    
-    
-    
-    
-
-    
-    
-

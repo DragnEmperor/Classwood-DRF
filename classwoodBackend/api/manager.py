@@ -1,6 +1,6 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.utils.translation import gettext_lazy as _
-
+from django.db import models
 
 class CustomUserManager(BaseUserManager):
     """
@@ -33,3 +33,16 @@ class CustomUserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError(_("Superuser must have is_superuser=True."))
         return self.create_user(email, password, **extra_fields)
+    
+# class SchoolQuerySet(models.QuerySet):
+#     def for_school(self, school):
+#         return self.filter(school=school)
+
+# class SchoolManager(models.Manager):
+#     def get_queryset(self):
+#         user = self.request.user
+#         school = models.SchoolModel.objects.get(user=user)
+#         return super().get_queryset().filter(school=school)
+
+#     def for_school(self, school):
+#         return self.get_queryset().for_school(school)

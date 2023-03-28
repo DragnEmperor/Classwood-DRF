@@ -139,12 +139,13 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
         school = models.SchoolModel.objects.get(user=user)
         data['school'] = school
         class_teacher_account  = models.Accounts.objects.get(id=data.get('class_teacher'))
-        sub_teacher_account  = models.Accounts.objects.get(id=data.get('sub_class_teacher'))
         class_teacher = models.StaffModel.objects.get(user=class_teacher_account)
         if class_teacher.is_class_teacher == True:
             return Response(data={"message":"Class Teacher Already Assigned"},status=status.HTTP_200_OK)
         data['class_teacher'] = class_teacher
-        data['sub_class_teacher'] = models.StaffModel.objects.get(user=sub_teacher_account)
+        if data.get('sub_class_teacher',None) is not None:
+          sub_teacher_account  = models.Accounts.objects.get(id=data.get('sub_class_teacher'))
+          data['sub_class_teacher'] = models.StaffModel.objects.get(user=sub_teacher_account)
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -163,6 +164,15 @@ class NoticeView(viewsets.ModelViewSet):
         if self.action == 'list':
             return serializers.NoticeListSerializer
         return self.serializer_class
+    
+    def get_queryset(self):
+        user = self.request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
+        return models.Notice.objects.filter(school=school)
+    
     
     def get_object(self):
         notice = super().get_object() 
