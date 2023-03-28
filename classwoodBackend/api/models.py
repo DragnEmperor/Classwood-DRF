@@ -138,7 +138,6 @@ class StaffModel(models.Model):
 
     @property
     def incharge_of(self):
-        print('test',ClassroomModel.objects.get(class_teacher=self.user.id))
         return ClassroomModel.objects.get(class_teacher=self.user.id)
     
     @property

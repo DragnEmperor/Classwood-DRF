@@ -137,7 +137,7 @@ class StaffListSerializer(serializers.ModelSerializer):
         fields = "__all__"
         
     def get_gender(self, obj):
-        return obj.get_gender_display()
+        return obj.get_gender_display
     
     
 class SubjectCreateSerializer(serializers.ModelSerializer):
@@ -184,7 +184,7 @@ class StudentListSerializer(serializers.ModelSerializer):
         return str(obj.get_month_attendance)
     
     def get_gender(self, obj):
-        return obj.get_gender_display()
+        return obj.get_gender_display
     
 class StudentAttendanceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -280,9 +280,9 @@ class TimeTableSerializer(serializers.ModelSerializer):
 class TimeTableListSerializer(serializers.ModelSerializer):
     subject = serializers.StringRelatedField()
     classroom = serializers.StringRelatedField()
-    model = models.TimeTableModel
-    fields = "__all__"
-         
+    class Meta:
+       model = models.TimeTableModel
+       fields = "_all_"
 # class AuthTokenSerializer(serializers.Serializer):
 #     """
 #     Serializer for the user authentication object

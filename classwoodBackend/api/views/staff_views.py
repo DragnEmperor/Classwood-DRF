@@ -440,17 +440,20 @@ class TimeTableView(viewsets.ModelViewSet):
         if classroom is None:
             return Response(data={"message":"Classroom is required"},status=status.HTTP_200_OK)
         for i in range(0,6):
-            day_table=[]
+            day_table={}
             errors=[]
-            subjects_in_day = subjects_days[i]
-            for j in range(0,6):
+       
+     
+            subjects_in_day = subjects_days
+            for j in range(0,len(timeInfo)-1):
                 # start_time = timeInfo[j]['start'].hour +":" + timeInfo[j]['start'].minute + ":00"
                 # end_time = timeInfo[j]['end'].hour +":" + timeInfo[j]['end'].minute + ":00"
+                print("\n\n\n\n\n\n Here")
                 day_table['day'] = i
-                day_table['start_time'] = timeInfo[j]['start'].hour +":" + timeInfo[j]['start'].minute + ":00"
-                day_table['end_time'] = timeInfo[j]['end'].hour +":" + timeInfo[j]['end'].minute + ":00"
-                day_table['subject'] = subjects_in_day[j].id
-                day_table['teacher'] = subjects_in_day[j].teacher
+                day_table['start_time'] = timeInfo[j]['start']['hour'] +":" + timeInfo[j]['start']['minute'] + ":00"
+                day_table['end_time'] = timeInfo[j]['end']['hour'] +":" + timeInfo[j]['end']['minute'] + ":00"
+                day_table['subject'] = subjects_in_day[j][i]['id']
+                day_table['teacher'] = subjects_in_day[j][i]['teacher']
                 serializer = self.serializer_class(data=day_table)
                 if serializer.is_valid():
                    serializer.save()
