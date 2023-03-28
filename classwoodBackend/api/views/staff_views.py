@@ -431,12 +431,40 @@ class TimeTableView(viewsets.ModelViewSet):
         except models.SchoolModel.DoesNotExist:
           school = (models.StaffModel.objects.get(user=user)).school
         data['school'] = school
-        serializer = self.serializer_class(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            response = {"message": "TimeTable Created Successfully", "data": serializer.data}
-            return Response(data=response,status=status.HTTP_201_CREATED)
-        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+        timetable = data.get('timetable',None)
+        if timetable is None:
+            return Response(data={"message":"Timetable is required"},status=status.HTTP_200_OK)
+        timeInfo = timetable[1]
+        subjects_days = timetable[0]
+        classroom = data.get('classroom',None)
+        if classroom is None:
+            return Response(data={"message":"Classroom is required"},status=status.HTTP_200_OK)
+        for i in range(0,6):
+            day_table=[]
+            errors=[]
+            subjects_in_day = subjects_days[i]
+            for j in range(0,6):
+                # start_time = timeInfo[j]['start'].hour +":" + timeInfo[j]['start'].minute + ":00"
+                # end_time = timeInfo[j]['end'].hour +":" + timeInfo[j]['end'].minute + ":00"
+                day_table['day'] = i
+                day_table['start_time'] = timeInfo[j]['start'].hour +":" + timeInfo[j]['start'].minute + ":00"
+                day_table['end_time'] = timeInfo[j]['end'].hour +":" + timeInfo[j]['end'].minute + ":00"
+                day_table['subject'] = subjects_in_day[j].id
+                day_table['teacher'] = subjects_in_day[j].teacher
+                serializer = self.serializer_class(data=day_table)
+                if serializer.is_valid():
+                   serializer.save()
+                   pass
+                else:
+                   errors.append({
+                        'row': i,
+                        'errors': serializer.errors
+                    })
+        if errors:  
+            return Response(data=errors,status=status.HTTP_200_OK)
+        else:
+            return Response(data={"message":"TimeTable Added Successfully"},status=status.HTTP_201_CREATED)
+            
     
 class SyllabusView(viewsets.ModelViewSet):
     serializer_class = serializers.SyllabusSerializer

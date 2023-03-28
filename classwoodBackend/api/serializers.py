@@ -130,10 +130,16 @@ class StaffListSerializer(serializers.ModelSerializer):
     user = AccountSerializer()
     incharge_of = serializers.CharField()
     sub_incharge_of = serializers.StringRelatedField(many=True)
+    gender = serializers.SerializerMethodField()
+    
     class Meta:
         model = models.StaffModel
         fields = "__all__"
         
+    def get_gender(self, obj):
+        return obj.get_gender_display()
+    
+    
 class SubjectCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
@@ -165,6 +171,7 @@ class StudentListSerializer(serializers.ModelSerializer):
     classroom = serializers.StringRelatedField()
     total_attendance = serializers.SerializerMethodField()
     month_attendance = serializers.SerializerMethodField()
+    gender = serializers.SerializerMethodField()
     
     class Meta:
         model = models.StudentModel
@@ -175,6 +182,9 @@ class StudentListSerializer(serializers.ModelSerializer):
     
     def get_month_attendance(self, obj):
         return str(obj.get_month_attendance)
+    
+    def get_gender(self, obj):
+        return obj.get_gender_display()
     
 class StudentAttendanceSerializer(serializers.ModelSerializer):
     class Meta:

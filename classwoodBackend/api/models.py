@@ -148,6 +148,13 @@ class StaffModel(models.Model):
     def __str__(self):
         return self.user.email
     
+    @property
+    def get_gender_display(self):
+        for choice in self.GENDER_CHOICE:
+            if choice[0] == self.gender:
+                return choice[1]
+        return None
+    
 # CLASSROOM RELATED MODELS 
 class ClassroomModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -267,6 +274,13 @@ class StudentModel(models.Model):
             att_lst[i.date.day - 1] = 2 if i.present else 1
 
         return json.dumps(att_lst) 
+    
+    @property
+    def get_gender_display(self):
+        for choice in self.GENDER_CHOICE:
+            if choice[0] == self.gender:
+                return choice[1]
+        return None
     
 # ATTENDANCE RELATED MODEL
 class StudentAttendance(models.Model):
@@ -427,12 +441,12 @@ class SyllabusModel(models.Model):
 class TimeTableModel(models.Model):
     # id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     DAYS_OF_WEEK = (
-        ('Monday', 'Monday'),
-        ('Tuesday', 'Tuesday'),
-        ('Wednesday', 'Wednesday'),
-        ('Thursday', 'Thursday'),
-        ('Friday', 'Friday'),
-        ('Saturday', 'Saturday'),
+        ('0', 'Monday'),
+        ('1', 'Tuesday'),
+        ('2', 'Wednesday'),
+        ('3', 'Thursday'),
+        ('4', 'Friday'),
+        ('5', 'Saturday'),
         # ('Sunday', 'Sunday')
     )
 
