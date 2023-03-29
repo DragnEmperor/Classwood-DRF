@@ -11,8 +11,10 @@ from django.core.serializers import serialize
 from rest_framework.parsers import MultiPartParser,FormParser,JSONParser
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import make_password,check_password
 from django.core.mail import send_mail
+from django.http import Http404
+from django.utils import timezone
  
 User = get_user_model()
 
@@ -32,27 +34,30 @@ class SchoolSignUpView(generics.CreateAPIView):
     
 class ForgotPasswordView(generics.GenericAPIView):
     serializer_class = serializers.ForgotPasswordSerializer
-    permission_classes = [IsAuthenticated & AdminPermission & IsTokenValid]
     
     def post(self,request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = get_object_or_404(User,email=serializer.validated_data['email'])
+        try:
+          user = get_object_or_404(User,email=serializer.validated_data['email'])
+        except Http404:
+            return Response(data={"message":"No User associated with this email found"},status=status.HTTP_200_OK)
         try:
            school_user = models.SchoolModel.objects.get(user=user)
         except models.SchoolModel.DoesNotExist:
             return Response(data={"message":"No School Account associated with this email found"},status=status.HTTP_200_OK)
         otp_base32 = pyotp.random_base32()
         otp = pyotp.TOTP(otp_base32,digits=6)
-        message=f'The request to change your password has been received.\n To continue, use the folowing OTP :\n {otp.now()}.'
+        final_otp = otp.now()
+        expiration_time = timezone.now() + timezone.timedelta(minutes=5)
+        hashed_otp = make_password(final_otp)
+        models.OTPModel.objects.create(email=user.email,hashed_otp=hashed_otp,expiration_time=expiration_time)
+        message=f'The request to change your password has been received.\n To continue, use the folowing OTP :\n {final_otp}.\n\n This OTP is valid only for 5 minutes.'
         send_mail('Forgot Password ClassWood',message,settings.EMAIL_HOST_USER,[user.email],fail_silently=False)
-        request.session['otp'] = otp.now()
-        request.session['email'] = user.email
-        return Response({'message':'An OTP to reset your password has been sent to your email'},status=status.HTTP_200_OK)
+        return Response({'message':'An OTP to reset your password has been sent to your email.\nNote : It is valid only for 5 minutes.'},status=status.HTTP_200_OK)
     
 class VerifyOTPView(generics.GenericAPIView):
     serializer_class = serializers.VerifyOTPSerializer
-    permission_classes = [IsAuthenticated & AdminPermission & IsTokenValid]
     
     def post(self,request):
         serializer = self.get_serializer(data=request.data)
@@ -61,8 +66,10 @@ class VerifyOTPView(generics.GenericAPIView):
         email = serializer.validated_data['email']
         otp = serializer.validated_data['otp']
         new_password = serializer.validated_data['password']
+        otp_obj = models.OTPModel.objects.filter(email=email).last()
         
-        if otp == request.session.get('otp') and email == request.session.get('email'):
+        if otp_obj and check_password(otp, otp_obj.hashed_otp) and otp_obj.email==email and otp_obj.expiration_time > timezone.now():
+           otp_obj.delete()
            user = get_object_or_404(User, email=email)
            user.password = make_password(new_password)
            user.save()
@@ -70,8 +77,6 @@ class VerifyOTPView(generics.GenericAPIView):
             # send the new password to the user's email
            message = f'The password for your ClassWood account has been changed.\n Your new password is {new_password}.\n\nIf not done by you then contact admin.'
            send_mail('New Password set',message,settings.EMAIL_HOST_USER,[user.email],fail_silently=False)
-           del request.session['otp']
-           del request.session['email']
            
            return Response({'message':'Password Changed Successfully'},status=status.HTTP_200_OK)
         return Response({'message':'Invalid OTP! Please Try Again'},status=status.HTTP_200_OK)
