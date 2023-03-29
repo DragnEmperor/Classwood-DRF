@@ -449,7 +449,7 @@ class TimeTableModel(models.Model):
     )
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
 
-    school = models.ForeignKey("SchoolModel", on_delete=models.CASCADE, default="", editable=False)
+    school = models.ForeignKey("SchoolModel", on_delete=models.CASCADE)
     classroom = models.ForeignKey('ClassroomModel', related_name='timetables', on_delete=models.CASCADE)
     day = models.CharField(choices=DAYS_OF_WEEK, max_length=10)
     start_time = models.TimeField()
