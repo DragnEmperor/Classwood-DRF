@@ -256,6 +256,7 @@ class ResultSerializer(serializers.ModelSerializer):
         fields = "__all__"
         
 class SyllabusSerializer(serializers.ModelSerializer):
+    attachments = serializers.ListField(child=serializers.FileField(),required=False,write_only=True)
     class Meta:
         model = models.SyllabusModel
         fields = "__all__"

@@ -499,6 +499,11 @@ class SyllabusView(viewsets.ModelViewSet):
     def create(self, request):
       data = request.data.copy()
       school = models.SchoolModel.objects.get(user=request.user)
+      subject_id = data.get('subject',None)
+      try:
+          subject = models.Subject.objects.get(id=subject_id,classroom=data.get('classroom',None),school=school)
+      except models.Subject.DoesNotExist:
+          return Response(data={"message":"Subject does not exists."},status=status.HTTP_200_OK)
       data['school'] = school
       serializer = self.serializer_class(data=data)
       if serializer.is_valid():
