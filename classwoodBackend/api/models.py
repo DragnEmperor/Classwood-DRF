@@ -427,11 +427,10 @@ class SyllabusModel(models.Model):
     subject = models.ForeignKey('Subject', on_delete=models.CASCADE)
     attachments = models.ManyToManyField('Attachment',blank=True)
     tag = models.CharField(max_length=50)
-    date_of_exam = models.DateField()
 
     class Meta:
-        ordering = ["-date_of_exam"]
-        unique_together = ("school", "classroom", "subject","date_of_exam")
+        # ordering = ["-date_of_exam"]
+        unique_together = ("school", "classroom", "subject")
 
     def __str__(self):
         return f"{self.subject.name}_{self.tag}"
@@ -453,5 +452,5 @@ class TimeTableModel(models.Model):
     day = models.CharField(choices=DAYS_OF_WEEK, max_length=10)
     start_time = models.TimeField()
     end_time = models.TimeField()
-    subject = models.ForeignKey('Subject', on_delete=models.CASCADE)
+    subject = models.ForeignKey('Subject', on_delete=models.SET_NULL, null=True, blank=True)
     teacher = models.ForeignKey('StaffModel', on_delete=models.SET_NULL, null=True, blank=True)

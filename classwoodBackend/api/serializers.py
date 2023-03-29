@@ -282,7 +282,17 @@ class TimeTableListSerializer(serializers.ModelSerializer):
     classroom = serializers.StringRelatedField()
     class Meta:
        model = models.TimeTableModel
-       fields = "_all_"
+       fields = "__all__"
+       
+    
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    
+class VerifyOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+    password = serializers.CharField(min_length=8,max_length=20)
+         
 # class AuthTokenSerializer(serializers.Serializer):
 #     """
 #     Serializer for the user authentication object

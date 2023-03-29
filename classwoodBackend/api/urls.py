@@ -17,7 +17,7 @@ router2.register('studentAttendance', staff_views.StudentAttendanceView)
 router2.register('exam', staff_views.ExamView)
 router2.register('result', staff_views.ResultView)
 router2.register('syllabus', staff_views.SyllabusView)
-router2.register('timeTable', staff_views.TimeTableView )
+router2.register('timeTable', staff_views.TimeTableView)
 
 urlpatterns = [
     path("signup/",school_views.SchoolSignUpView.as_view(),name="school_signup"),
@@ -25,6 +25,8 @@ urlpatterns = [
     path('logout/', general_views.LogoutView.as_view(), name='logout'),
     path('refresh-token/', TokenRefreshView.as_view(), name='token_refresh'),
     path("account/",school_views.SchoolProfileView.as_view(),name="school_profile"),
+    path('forgot-password/', school_views.ForgotPasswordView.as_view(), name='forgot_password'),
+    path('verify-otp/', school_views.VerifyOTPView.as_view(), name='verify_otp'),
     # path("staff/create",StaffCreateView.as_view(),name="staff_signup"),
     path("list/",include(router.urls),name="viewset_views_lists"),
     path("staff/me",staff_views.StaffSingleView.as_view(),name="staff_profile"),

@@ -442,8 +442,6 @@ class TimeTableView(viewsets.ModelViewSet):
         for i in range(0,6):
             day_table={}
             errors=[]
-       
-     
             subjects_in_day = subjects_days
             for j in range(0,len(timeInfo)-1):
                 # start_time = timeInfo[j]['start'].hour +":" + timeInfo[j]['start'].minute + ":00"
