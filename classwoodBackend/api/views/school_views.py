@@ -13,6 +13,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.core.mail import send_mail
+from django.http import Http404
  
 User = get_user_model()
 
@@ -32,12 +33,14 @@ class SchoolSignUpView(generics.CreateAPIView):
     
 class ForgotPasswordView(generics.GenericAPIView):
     serializer_class = serializers.ForgotPasswordSerializer
-    permission_classes = [IsAuthenticated & AdminPermission & IsTokenValid]
     
     def post(self,request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = get_object_or_404(User,email=serializer.validated_data['email'])
+        try:
+          user = get_object_or_404(User,email=serializer.validated_data['email'])
+        except Http404:
+            return Response(data={"message":"No User associated with this email found"},status=status.HTTP_200_OK)
         try:
            school_user = models.SchoolModel.objects.get(user=user)
         except models.SchoolModel.DoesNotExist:
@@ -52,7 +55,6 @@ class ForgotPasswordView(generics.GenericAPIView):
     
 class VerifyOTPView(generics.GenericAPIView):
     serializer_class = serializers.VerifyOTPSerializer
-    permission_classes = [IsAuthenticated & AdminPermission & IsTokenValid]
     
     def post(self,request):
         serializer = self.get_serializer(data=request.data)
