@@ -8,6 +8,7 @@ from .utils import generate_staff_user
 
 
 
+
 class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Accounts

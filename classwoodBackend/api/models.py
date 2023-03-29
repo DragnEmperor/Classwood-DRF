@@ -456,3 +456,8 @@ class TimeTableModel(models.Model):
     end_time = models.TimeField()
     subject = models.ForeignKey('Subject', on_delete=models.SET_NULL, null=True, blank=True)
     teacher = models.ForeignKey('StaffModel', on_delete=models.SET_NULL, null=True, blank=True)
+    
+class OTPModel(models.Model):
+    email = models.EmailField()
+    hashed_otp = models.CharField(max_length=128)
+    expiration_time = models.DateTimeField()
