@@ -81,12 +81,16 @@ class ClassroomListSerializer(serializers.ModelSerializer):
 class SubjectListSerializer(serializers.ModelSerializer):
     classroom = serializers.StringRelatedField()
     teacher = serializers.SerializerMethodField(method_name='get_full_name')
+    teacher_id = serializers.SerializerMethodField()
     class Meta:
         model = models.Subject
         fields = "__all__"
     
     def get_full_name(self, obj):
         return obj.teacher.full_name
+    
+    def get_teacher_id(self,obj):
+        return obj.teacher.user.id
     
 # class AttachmentSerializer(serializers.ModelSerializer):
 #     fileName = serializers.FileField()
