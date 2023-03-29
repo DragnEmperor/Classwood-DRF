@@ -280,6 +280,7 @@ class TimeTableSerializer(serializers.ModelSerializer):
 class TimeTableListSerializer(serializers.ModelSerializer):
     subject = serializers.StringRelatedField()
     classroom = serializers.StringRelatedField()
+    school =  serializers.StringRelatedField()
     class Meta:
        model = models.TimeTableModel
        fields = "_all_"

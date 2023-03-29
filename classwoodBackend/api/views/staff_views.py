@@ -443,30 +443,34 @@ class TimeTableView(viewsets.ModelViewSet):
             day_table={}
             errors=[]
        
-     
-            subjects_in_day = subjects_days
-            for j in range(0,len(timeInfo)-1):
+
+            for j in range(0,len(timeInfo)):
+                print(j)
                 # start_time = timeInfo[j]['start'].hour +":" + timeInfo[j]['start'].minute + ":00"
                 # end_time = timeInfo[j]['end'].hour +":" + timeInfo[j]['end'].minute + ":00"
-                print("\n\n\n\n\n\n Here")
-                day_table['day'] = i
-                day_table['start_time'] = timeInfo[j]['start']['hour'] +":" + timeInfo[j]['start']['minute'] + ":00"
-                day_table['end_time'] = timeInfo[j]['end']['hour'] +":" + timeInfo[j]['end']['minute'] + ":00"
-                day_table['subject'] = subjects_in_day[j][i]['id']
-                day_table['teacher'] = subjects_in_day[j][i]['teacher']
-                serializer = self.serializer_class(data=day_table)
-                if serializer.is_valid():
-                   serializer.save()
-                   pass
-                else:
-                   errors.append({
+                if(subjects_days[j][i]['id']):
+                    day_table['day'] = i
+                    day_table['start_time'] = timeInfo[j]['start']['hour'] +":" + timeInfo[j]['start']['minute'] + ":00"
+                    day_table['end_time'] = timeInfo[j]['end']['hour'] +":" + timeInfo[j]['end']['minute'] + ":00"
+                    day_table['subject'] = subjects_days[j][i]['id']
+                    day_table['teacher'] = subjects_days[j][i]['teacher']
+                    day_table['school'] = data['school']
+                    day_table['classroom'] = data['classroom']
+                    serializer = self.serializer_class(data=day_table)
+                    print("this is ser",day_table, serializer.is_valid())
+                    if serializer.is_valid():
+                        print("\n\n\n\n\n serialzie")
+                        serializer.save()
+                        pass
+                    else:
+                        errors.append({
                         'row': i,
                         'errors': serializer.errors
                     })
-        if errors:  
-            return Response(data=errors,status=status.HTTP_200_OK)
-        else:
-            return Response(data={"message":"TimeTable Added Successfully"},status=status.HTTP_201_CREATED)
+            if errors:  
+                return Response(data=errors,status=status.HTTP_200_OK)
+            else:
+                return Response(data={"message":"TimeTable Added Successfully"},status=status.HTTP_201_CREATED)
             
     
 class SyllabusView(viewsets.ModelViewSet):
