@@ -1,14 +1,12 @@
-from django.shortcuts import render,get_object_or_404
-from rest_framework import generics,status,viewsets,serializers
+from django.shortcuts import get_object_or_404
+from rest_framework import generics,status,viewsets
 from .. import serializers
 from rest_framework.response import Response
 from rest_framework.request import Request
-from ..permissions import AdminPermission,StaffLevelPermission,IsTokenValid,ReadOnlyStaffPermission
+from ..permissions import AdminPermission,IsTokenValid,ReadOnlyStaffPermission
 from rest_framework.permissions import IsAuthenticated
 from .. import models
-import json,csv,base64,pyotp
-from django.core.serializers import serialize
-from rest_framework.parsers import MultiPartParser,FormParser,JSONParser
+import csv,pyotp
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password,check_password
@@ -271,12 +269,13 @@ class StaffAttendanceView(viewsets.ModelViewSet):
         return self.serializer_class
     
     def get_queryset(self):
+
         user=self.request.user
         try:
           school = models.SchoolModel.objects.get(user=user)
         except models.SchoolModel.DoesNotExist:
           school = (models.StaffModel.objects.get(user=user)).school
-          attendance = models.StaffAttendance.objects.filter(classroom=get_classroom,school=school)
+        attendance = models.StaffAttendance.objects.filter(school=school)
         return attendance
     
     def create(self, request):

@@ -256,6 +256,7 @@ class ResultSerializer(serializers.ModelSerializer):
         fields = "__all__"
         
 class SyllabusSerializer(serializers.ModelSerializer):
+    attachments = serializers.ListField(child=serializers.FileField(),required=False,write_only=True)
     class Meta:
         model = models.SyllabusModel
         fields = "__all__"
@@ -272,9 +273,17 @@ class SyllabusSerializer(serializers.ModelSerializer):
     
 class SyllabusListSerializer(serializers.ModelSerializer):
     attachments = serializers.StringRelatedField(many=True)
+    subject_name = serializers.SerializerMethodField()
+    classroom_name = serializers.SerializerMethodField()
     class Meta:
         model = models.SyllabusModel
         fields = '__all__'
+
+    def get_subject_name(self,obj):
+        return obj.subject.name
+
+    def get_classroom_name(self,obj):
+        return obj.classroom.class_name +' - '+ obj.classroom.section_name
         
 class TimeTableSerializer(serializers.ModelSerializer):
     class Meta:

@@ -426,7 +426,7 @@ class SyllabusModel(models.Model):
     classroom = models.ForeignKey("ClassroomModel", on_delete=models.CASCADE)
     subject = models.ForeignKey('Subject', on_delete=models.CASCADE)
     attachments = models.ManyToManyField('Attachment',blank=True)
-    tag = models.CharField(max_length=50)
+    tag = models.CharField(max_length=50,blank=True,null=True)
 
     class Meta:
         # ordering = ["-date_of_exam"]
