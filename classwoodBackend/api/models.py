@@ -154,6 +154,26 @@ class StaffModel(models.Model):
                 return choice[1]
         return None
     
+    @property
+    def get_attendance(self):
+        att = StaffAttendance.objects.filter(staff=self.user.id).values("present")
+        if not att:
+            return 100
+        return att.filter(present=True).count() / att.count() * 100
+    
+    @property
+    def get_month_attendance(self):
+        att_lst = [
+            0 for _ in range(monthrange(timezone.now().year, timezone.now().month)[1])
+        ]
+        att = StaffAttendance.objects.filter(
+            staff=self.user.id, date__gte=timezone.now().replace(day=1)
+        )
+        for i in att:
+            att_lst[i.date.day - 1] = 2 if i.present else 1
+
+        return json.dumps(att_lst)
+    
 # CLASSROOM RELATED MODELS 
 class ClassroomModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)

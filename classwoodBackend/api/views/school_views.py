@@ -269,7 +269,6 @@ class StaffAttendanceView(viewsets.ModelViewSet):
         return self.serializer_class
     
     def get_queryset(self):
-
         user=self.request.user
         try:
           school = models.SchoolModel.objects.get(user=user)
@@ -285,6 +284,7 @@ class StaffAttendanceView(viewsets.ModelViewSet):
           school = models.SchoolModel.objects.get(user=user)
         except models.SchoolModel.DoesNotExist:
           return Response(data={"message":"You are not a school admin"},status=status.HTTP_200_OK)
+        data['school'] = school
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
