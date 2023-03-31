@@ -267,7 +267,7 @@ class ExamListSerializer(serializers.ModelSerializer):
     def get_subject_name(self, obj):
         return obj.subject.name
     
-    def get_class_name(self, obj):
+    def get_classroom_name(self, obj):
         return obj.classroom.class_name +' - '+ obj.classroom.section_name
         
 class ResultSerializer(serializers.ModelSerializer):

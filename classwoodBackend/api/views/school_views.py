@@ -3,7 +3,7 @@ from rest_framework import generics,status,viewsets
 from .. import serializers
 from rest_framework.response import Response
 from rest_framework.request import Request
-from ..permissions import AdminPermission,IsTokenValid,ReadOnlyStaffPermission
+from ..permissions import AdminPermission,IsTokenValid,ReadOnlyStaffPermission,ReadOnlyStudentPermission
 from rest_framework.permissions import IsAuthenticated
 from .. import models
 import csv,pyotp
@@ -212,7 +212,7 @@ class ClassroomSchoolView(viewsets.ModelViewSet):
     
 class NoticeView(viewsets.ModelViewSet):
     serializer_class = serializers.NoticeCreateSerializer
-    permission_classes = [IsAuthenticated & (ReadOnlyStaffPermission | AdminPermission) & IsTokenValid]
+    permission_classes = [IsAuthenticated & (ReadOnlyStaffPermission | ReadOnlyStudentPermission |AdminPermission) & IsTokenValid]
     queryset = models.Notice.objects.all()
     
     def get_serializer_class(self):

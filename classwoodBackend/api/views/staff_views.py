@@ -348,12 +348,16 @@ class ResultView(viewsets.ModelViewSet):
     
     def get_queryset(self):
         get_student = self.request.GET.get('student',None)
+        get_exam = self.request.GET.get('exam',None) 
         user = self.request.user
         school = models.SchoolModel.objects.get(user=user)
-        if get_student is None:
-            results = results = models.ResultModel.objects.filter(student__school = school)
-        else:
-            results = models.ResultModel.objects.filter(student=get_student,student__school = school)
+        results = models.ResultModel.objects.filter(student__school = school)
+        if get_student is not None:
+          results = results.filter(student=get_student)
+        if get_exam is not None:
+          results = results.filter(exam=get_exam)
+        if get_student is not None and get_exam is not None:
+          results = results.filter(student=get_student, exam=get_exam)
         return results
     
     def create(self, request):
@@ -521,6 +525,7 @@ class SyllabusView(viewsets.ModelViewSet):
     
     def create(self, request):
       data = request.data.copy()
+      user = request.user
       try:
           school = models.SchoolModel.objects.get(user=user)
       except models.SchoolModel.DoesNotExist:
