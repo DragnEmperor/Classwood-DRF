@@ -46,4 +46,5 @@ admin.site.register(models.SyllabusModel)
 admin.site.register(models.ExamModel)
 admin.site.register(models.ResultModel)
 admin.site.register(models.TimeTableModel)
+admin.site.register(models.OTPModel)
 # Register your models here.

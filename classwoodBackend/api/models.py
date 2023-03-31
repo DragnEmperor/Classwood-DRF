@@ -6,7 +6,7 @@ from .validators import mobile_regex
 from django.utils import timezone
 from django.conf import settings
 from calendar import monthrange
-import json,os
+import json,os,datetime
 
 def school_logo_upload(instance, filename):
     ext = filename.split(".")[-1]
@@ -224,7 +224,7 @@ class Subject(models.Model):
         ordering = ["name"]
 
     def __str__(self):
-        return f'{self.name} {self.classroom}'
+        return f'{self.name}'
     
 
 class StudentModel(models.Model):
@@ -304,7 +304,7 @@ class StudentModel(models.Model):
 # ATTENDANCE RELATED MODEL
 class StudentAttendance(models.Model):
     student = models.ForeignKey(StudentModel, on_delete=models.CASCADE)
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=datetime.date.today)
     present = models.BooleanField(default=False)
     classroom = models.ForeignKey(ClassroomModel, on_delete=models.CASCADE)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)

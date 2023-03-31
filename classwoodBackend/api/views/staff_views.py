@@ -328,7 +328,11 @@ class ExamView(viewsets.ModelViewSet):
     
     def create(self, request):
       data = request.data.copy()
-      school = models.SchoolModel.objects.get(user=request.user)
+      user = request.user
+      try:
+          school = models.SchoolModel.objects.get(user=user)
+      except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
       data['school'] = school
       serializer = self.serializer_class(data=data)
       if serializer.is_valid():
@@ -354,6 +358,7 @@ class ResultView(viewsets.ModelViewSet):
     
     def create(self, request):
         csv_file = request.FILES.get('csv_file',None)
+        user = request.user
         if csv_file:
             data = {}
             errors=[]
@@ -365,7 +370,10 @@ class ResultView(viewsets.ModelViewSet):
                     break
             #    name = row.get('First Name',None) + row.get('Last Name',None)
                rollNo = row.get('Roll No',None)
-               school = models.SchoolModel.objects.get(user=request.user)
+               try:
+                 school = models.SchoolModel.objects.get(user=user)
+               except models.SchoolModel.DoesNotExist:
+                 school = (models.StaffModel.objects.get(user=user)).school
                if classroom is None :
                   className = row.get('Class',None) + row.get('Section')
                   classroom = models.ClassroomModel.objects.get(class_name=className,school=school)
@@ -393,7 +401,10 @@ class ResultView(viewsets.ModelViewSet):
                 return Response(data={"message":"Result Added from CSV Successfully"},status=status.HTTP_201_CREATED)
         else:
            data = request.data.copy()
-           school = models.SchoolModel.objects.get(user=request.user)
+           try:
+             school = models.SchoolModel.objects.get(user=user)
+           except models.SchoolModel.DoesNotExist:
+             school = (models.StaffModel.objects.get(user=user)).school
            data['school'] = school
            serializer = self.serializer_class(data=data)
            if serializer.is_valid():
@@ -492,14 +503,28 @@ class SyllabusView(viewsets.ModelViewSet):
         except models.SchoolModel.DoesNotExist:
           school = (models.StaffModel.objects.get(user=user)).school
         if get_classroom is None:
-            syllabus = models.SyllabusModel.objects.filter(school = school)
+            try:
+                teacher = models.StaffModel.objects.get(user=user)
+                classroom = models.ClassroomModel.objects.filter(Q(class_teacher=teacher) | Q(sub_class_teacher=teacher))
+                teaches = list(models.Subject.objects.only("classroom").filter(teacher=teacher).values_list('classroom', flat=True))
+                classroom2 = models.ClassroomModel.objects.filter(id__in=teaches)
+                total_classes = classroom | classroom2
+                syllabus = models.SyllabusModel.objects.none()
+                for classroom in total_classes: 
+                   class_syll = models.SyllabusModel.objects.filter(classroom = classroom,school=school)
+                   syllabus = syllabus | class_syll
+            except models.StaffModel.DoesNotExist:
+                syllabus = models.SyllabusModel.objects.filter(school = school)
         else:
             syllabus = models.SyllabusModel.objects.filter(classroom = get_classroom,school = school)
         return syllabus
     
     def create(self, request):
       data = request.data.copy()
-      school = models.SchoolModel.objects.get(user=request.user)
+      try:
+          school = models.SchoolModel.objects.get(user=user)
+      except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
       subject_id = data.get('subject',None)
       try:
           subject = models.Subject.objects.get(id=subject_id,classroom=data.get('classroom',None),school=school)

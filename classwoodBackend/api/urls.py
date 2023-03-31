@@ -1,5 +1,5 @@
 from django.urls import path,include
-from .views import staff_views,school_views,general_views
+from .views import staff_views,school_views,general_views,student_views
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -33,4 +33,9 @@ urlpatterns = [
     path("staff/",include(router2.urls),name="staff_classroom_list"),
     path('paytm-payment/', general_views.PaytmPaymentAPIView.as_view()),
     path('paytm-callback/', general_views.PaytmCallbackAPIView.as_view()),
+    # Student views
+    path("student/me",student_views.StudentSingleView.as_view(),name="student_profile"),
+    path("student/subjects",student_views.StudentSubjectView.as_view(),name="student_subjects"),
+    path("student/syllabus",student_views.StudentSyllabusView.as_view(),name="student_syllabus"),
+    path("student/result",student_views.StudentResultView.as_view(),name="student_result"),
 ]

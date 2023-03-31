@@ -67,6 +67,8 @@ class ClassroomListSerializer(serializers.ModelSerializer):
     no_of_subjects = serializers.SerializerMethodField()
     no_of_teachers = serializers.SerializerMethodField()
     teachers = serializers.StringRelatedField(many=True)
+    class_teacher = serializers.SerializerMethodField()
+    sub_class_teacher = serializers.SerializerMethodField()
     
     class Meta:
         model = models.ClassroomModel
@@ -77,6 +79,16 @@ class ClassroomListSerializer(serializers.ModelSerializer):
     
     def get_no_of_teachers(self,obj):
         return str(obj.no_of_teachers)
+    
+    def get_class_teacher(self,obj):
+        if obj.class_teacher is None:
+            return 'not assigned'
+        return obj.class_teacher.full_name
+    
+    def get_sub_class_teacher(self,obj):
+        if obj.sub_class_teacher is None:
+            return 'not assigned'
+        return obj.sub_class_teacher.full_name
     
         
 class SubjectListSerializer(serializers.ModelSerializer):
@@ -245,9 +257,18 @@ class ExamCreateSerializer(serializers.ModelSerializer):
     
 class ExamListSerializer(serializers.ModelSerializer):
     attachments = serializers.StringRelatedField(many=True)
+    subject_name = serializers.SerializerMethodField()
+    classroom_name = serializers.SerializerMethodField()
+    
     class Meta:
         model = models.ExamModel
         fields = '__all__'
+        
+    def get_subject_name(self, obj):
+        return obj.subject.name
+    
+    def get_class_name(self, obj):
+        return obj.classroom.class_name +' - '+ obj.classroom.section_name
         
 class ResultSerializer(serializers.ModelSerializer):
     
@@ -314,6 +335,13 @@ class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6)
     password = serializers.CharField(min_length=8,max_length=20)
+    
+    
+# StudeNT Serializers
+class ResultListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.ResultModel
+        fields="__all__"
          
 # class AuthTokenSerializer(serializers.Serializer):
 #     """
