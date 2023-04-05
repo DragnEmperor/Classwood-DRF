@@ -74,6 +74,8 @@ class SchoolModel(models.Model):
     """
     SchoolSignUpModel model
     """
+    
+    BOARD_CHOICE = (("ICSE", "ICSE"), ("CBSE", "CBSE"), ("HP", "HP"))
     user = models.OneToOneField(Accounts, on_delete=models.CASCADE,primary_key=True)
     school_name = models.CharField(max_length=100)
     school_phone = models.CharField(validators=[mobile_regex], max_length=13)
@@ -87,7 +89,10 @@ class SchoolModel(models.Model):
     date_of_establishment = models.DateField(null=True,blank=True)
     staff_limit = models.CharField(max_length=10,default=25)
     student_limit = models.CharField(max_length=10,default=500)
-
+    school_board = models.CharField(max_length=7,choices=BOARD_CHOICE)
+    school_affNo = models.CharField(max_length=30)
+    
+    
     def __str__(self):
         return self.school_name
     
@@ -123,6 +128,7 @@ class StaffModel(models.Model):
     contact_email = models.EmailField(null=True, blank=True)
     address = models.CharField(max_length=100)
     account_no = models.CharField(max_length=100)
+    ifsc_code = models.CharField(max_length=50)
 
     # School Information
     is_class_teacher = models.BooleanField(default=False)
@@ -180,7 +186,7 @@ class ClassroomModel(models.Model):
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
     # Class Information
     class_name = models.CharField(max_length=50)
-    section_name = models.CharField(max_length=1)
+    section_name = models.CharField(max_length=20)
     class_teacher = models.ForeignKey(StaffModel, on_delete=models.SET_NULL,null=True)
     sub_class_teacher = models.ForeignKey(StaffModel, on_delete=models.SET_NULL, related_name="sub_class_teacher", null=True, blank=True)
     teachers = models.ManyToManyField(StaffModel,related_name='teachers_of_class',blank=True)
