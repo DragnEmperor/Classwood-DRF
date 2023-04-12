@@ -449,8 +449,8 @@ class TimeTableView(viewsets.ModelViewSet):
         timetable = data.get('timetable',None)
         if timetable is None:
             return Response(data={"message":"Timetable is required"},status=status.HTTP_200_OK)
-        timeInfo = timetable[1]
-        subjects_days = timetable[0]
+        # timeInfo = timetable[1]
+        # subjects_days = timetable[0]
         classroom = data.get('classroom',None)
         if classroom is None:
             return Response(data={"message":"Classroom is required"},status=status.HTTP_200_OK)
@@ -459,22 +459,20 @@ class TimeTableView(viewsets.ModelViewSet):
             errors=[]
        
             print(i)
-            for j in range(0,len(timeInfo)):
+            for j in range(0,len(timetable[i])):
                 print(j)
                 # start_time = timeInfo[j]['start'].hour +":" + timeInfo[j]['start'].minute + ":00"
                 # end_time = timeInfo[j]['end'].hour +":" + timeInfo[j]['end'].minute + ":00"
-                if(subjects_days[j][i]['id']):
+                if(timetable[i][j]['subject']['name'] != "No Subject Selected"):
                     day_table['day'] = i
-                    day_table['start_time'] = timeInfo[j]['start']['hour'] +":" + timeInfo[j]['start']['minute'] + ":00"
-                    day_table['end_time'] = timeInfo[j]['end']['hour'] +":" + timeInfo[j]['end']['minute'] + ":00"
-                    day_table['subject'] = subjects_days[j][i]['id']
-                    day_table['teacher'] = subjects_days[j][i]['teacher_id']
+                    day_table['start_time'] = str(timetable[i][j]['start']['hour']) +":" + str(timetable[i][j]['start']['minute']) + ":00"
+                    day_table['end_time'] = str(timetable[i][j]['end']['hour']) +":" + str(timetable[i][j]['end']['minute']) + ":00"
+                    day_table['subject'] = timetable[i][j]['subject']['id']
+                    day_table['teacher'] = timetable[i][j]['subject']['teacher_id']
                     day_table['school'] = data['school']
                     day_table['classroom'] = data['classroom']
                     serializer = self.serializer_class(data=day_table)
-                    print("this is ser",day_table, serializer.is_valid())
                     if serializer.is_valid():
-                        print("\n\n\n\n\n serialzie")
                         serializer.save()
                         print("save passes")
                         pass
@@ -483,12 +481,74 @@ class TimeTableView(viewsets.ModelViewSet):
                         'row': i,
                         'errors': serializer.errors
                     })
+      
         if errors:  
             return Response(data=errors,status=status.HTTP_200_OK)
         else:
             return Response(data={"message":"TimeTable Added Successfully"},status=status.HTTP_201_CREATED)
             
     
+
+class CommonTimeView(viewsets.ModelViewSet):
+    serializer_class = serializers.CommonTimeSerializer
+    permission_classes = [IsAuthenticated & (ReadOnlyStaffPermission | AdminPermission) & IsTokenValid]
+    queryset = models.CommonTimeModel.objects.all()
+    
+    def get_serializer_class(self):
+        if self.action=='list':
+            return serializers.CommonTimeListSerializer
+        return self.serializer_class
+    
+    def get_queryset(self):
+        get_classroom = self.request.GET.get('classroom',None)
+        user = self.request.user
+        school = models.SchoolModel.objects.get(user=user)
+        if get_classroom is None:
+            timetable = models.CommonTimeModel.objects.filter(school=school)
+        else:
+            timetable = models.CommonTimeModel.objects.filter(classroom=get_classroom,school=school)
+        return timetable
+    
+    def create(self, request):
+        data = request.data.copy()
+        user = request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
+        data['school'] = school
+        common = data.get('common',None)
+        
+        errors = []
+        classroom = data.get('classroom',None)
+        if classroom is None:
+            return Response(data={"message":"Classroom is required"},status=status.HTTP_200_OK)
+       
+        if common : 
+            for i in range(0, len(common)):
+                print(common[i])
+                day_table = {}
+                day_table['start_time'] = str(common[i]['start']['hour']) +":" + str(common[i]['start']['minute']) + ":00"
+                day_table['end_time'] = str(common[i]['end']['hour']) +":" + str(common[i]['end']['minute']) + ":00"
+                day_table['subject'] = common[i]['subject']
+                day_table['school'] = data['school']
+                day_table['classroom'] = data['classroom']
+                serializer = self.serializer_class(data=day_table)
+                if serializer.is_valid():
+                    serializer.save()
+                    print("save passes")
+                    pass
+                else:
+                    errors.append({
+                    'row': i,
+                    'errors': serializer.errors
+                })
+        if errors:  
+            return Response(data=errors,status=status.HTTP_200_OK)
+        else:
+            return Response(data={"message":"Common Time Added Successfully"},status=status.HTTP_201_CREATED)
+            
+  
 class SyllabusView(viewsets.ModelViewSet):
     serializer_class = serializers.SyllabusSerializer
     permission_classes = [IsAuthenticated & (StaffLevelPermission | AdminPermission) & IsTokenValid]

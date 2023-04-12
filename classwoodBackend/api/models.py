@@ -89,8 +89,8 @@ class SchoolModel(models.Model):
     date_of_establishment = models.DateField(null=True,blank=True)
     staff_limit = models.CharField(max_length=10,default=25)
     student_limit = models.CharField(max_length=10,default=500)
-    school_board = models.CharField(max_length=7,choices=BOARD_CHOICE)
-    school_affNo = models.CharField(max_length=30)
+    school_board = models.CharField(max_length=7,choices=BOARD_CHOICE, default="CBSE")
+    school_affNo = models.CharField(max_length=30, default="1")
     
     
     def __str__(self):
@@ -128,7 +128,8 @@ class StaffModel(models.Model):
     contact_email = models.EmailField(null=True, blank=True)
     address = models.CharField(max_length=100)
     account_no = models.CharField(max_length=100)
-    ifsc_code = models.CharField(max_length=50)
+    ifsc_code = models.CharField(max_length=50, default="12345678")
+    is_teaching_staff = models.BooleanField(default=True)
 
     # School Information
     is_class_teacher = models.BooleanField(default=False)
@@ -482,6 +483,17 @@ class TimeTableModel(models.Model):
     end_time = models.TimeField()
     subject = models.ForeignKey('Subject', on_delete=models.SET_NULL, null=True, blank=True)
     teacher = models.ForeignKey('StaffModel', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    
+class CommonTimeModel(models.Model):
+ 
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+
+    school = models.ForeignKey("SchoolModel", on_delete=models.CASCADE)
+    classroom = models.ForeignKey('ClassroomModel', related_name='commontime', on_delete=models.CASCADE)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    subject = models.CharField(max_length=128)
     
 class OTPModel(models.Model):
     email = models.EmailField()
