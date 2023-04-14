@@ -111,6 +111,12 @@ class SchoolModel(models.Model):
     # def is_verified(self):
     #     return self.user.is_verified
     
+class SessionModel(models.Model):
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_active = models.BooleanField(default=False)
+    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+    
     
 class StaffModel(models.Model):
     GENDER_CHOICE = (("1", "Male"), ("2", "Female"), ("3", "Other"))
@@ -134,6 +140,7 @@ class StaffModel(models.Model):
     is_class_teacher = models.BooleanField(default=False)
     date_of_joining = models.DateField()
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
 
     class Meta:
         ordering = ["date_of_joining", "first_name", "last_name"]
@@ -190,6 +197,7 @@ class ClassroomModel(models.Model):
     class_teacher = models.ForeignKey(StaffModel, on_delete=models.SET_NULL,null=True)
     sub_class_teacher = models.ForeignKey(StaffModel, on_delete=models.SET_NULL, related_name="sub_class_teacher", null=True, blank=True)
     teachers = models.ManyToManyField(StaffModel,related_name='teachers_of_class',blank=True)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
     # Subject Information
     # subjects = models.ManyToManyField(Subject, related_name="class_map")
 
@@ -222,6 +230,7 @@ class Subject(models.Model):
     subject_pic_url = models.CharField(max_length=500, null=True, blank=True)
     teacher = models.ForeignKey(StaffModel, on_delete=models.SET_NULL, related_name="taught_by", null=True)
     classroom = models.ForeignKey(ClassroomModel, on_delete=models.CASCADE)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "Subject"
@@ -239,6 +248,7 @@ class StudentModel(models.Model):
     user = models.OneToOneField(Accounts, on_delete=models.CASCADE, primary_key=True)
     profile_pic = models.ImageField(upload_to=student_profile_upload,null=True, blank=True)
     profile_pic_url = models.CharField(max_length=500, null=True, blank=True)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
 
     # Personal Information
     first_name = models.CharField(max_length=50)
@@ -314,6 +324,7 @@ class StudentAttendance(models.Model):
     present = models.BooleanField(default=False)
     classroom = models.ForeignKey(ClassroomModel, on_delete=models.CASCADE)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "StudentAttendance"
@@ -332,6 +343,7 @@ class StaffAttendance(models.Model):
     date = models.DateField(default=timezone.now)
     present = models.BooleanField(default=False)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "StaffAttendance"
@@ -355,6 +367,7 @@ class Notice(models.Model):
     attachments = models.ManyToManyField('Attachment',blank=True)
     read_by_students = models.ManyToManyField('StudentModel', related_name="read_by_students", blank=True)
     read_by_staff = models.ManyToManyField('StaffModel', related_name="read_by_teachers", blank=True)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
 
     class Meta:
         ordering = ["-date_posted"]
@@ -383,6 +396,7 @@ class FeesDetails(models.Model):
     due_date = models.DateField()
     description = models.TextField()
     for_class = models.ForeignKey(ClassroomModel, on_delete=models.CASCADE)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
 
     class Meta:
         ordering = ["-due_date"]
@@ -424,6 +438,7 @@ class ExamModel(models.Model):
     attachments = models.ManyToManyField('Attachment',blank=True)
     tag = models.CharField(max_length=50)
     date_of_exam = models.DateField()
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
 
     class Meta:
         ordering = ["-date_of_exam"]
@@ -437,6 +452,8 @@ class ResultModel(models.Model):
     student = models.ForeignKey("StudentModel", on_delete=models.CASCADE)
     exam = models.ForeignKey("ExamModel", on_delete=models.CASCADE)
     score = models.IntegerField()
+    attachments = models.ManyToManyField('Attachment',blank=True)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
 
     class Meta:
         ordering = ["-exam__date_of_exam"]
@@ -453,6 +470,7 @@ class SyllabusModel(models.Model):
     subject = models.ForeignKey('Subject', on_delete=models.CASCADE)
     attachments = models.ManyToManyField('Attachment',blank=True)
     tag = models.CharField(max_length=50,blank=True,null=True)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
 
     class Meta:
         # ordering = ["-date_of_exam"]
@@ -460,6 +478,19 @@ class SyllabusModel(models.Model):
 
     def __str__(self):
         return f"{self.subject.name}_{self.tag}"
+    
+class EventModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    school = models.ForeignKey("SchoolModel", on_delete=models.CASCADE)
+    attachments = models.ManyToManyField('Attachment',blank=True)
+    # tag = models.CharField(max_length=50,blank=True,null=True)
+    date = models.DateField()
+    title = models.CharField(max_length=50)
+    description = models.TextField()
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
+    
+    class Meta:
+        unique_together = ("school", "date","title")
     
     
 class TimeTableModel(models.Model):
@@ -482,8 +513,10 @@ class TimeTableModel(models.Model):
     end_time = models.TimeField()
     subject = models.ForeignKey('Subject', on_delete=models.SET_NULL, null=True, blank=True)
     teacher = models.ForeignKey('StaffModel', on_delete=models.SET_NULL, null=True, blank=True)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
     
 class OTPModel(models.Model):
     email = models.EmailField()
     hashed_otp = models.CharField(max_length=128)
     expiration_time = models.DateTimeField()
+    

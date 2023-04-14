@@ -5,7 +5,7 @@ from django.utils.translation import gettext as _
 from rest_framework.validators import ValidationError
 from .function import create_jwt_pair
 from .utils import generate_staff_user
-
+import datetime
 
 
 
@@ -140,6 +140,17 @@ class NoticeListSerializer(serializers.ModelSerializer):
         currentUser = self.context['request'].user
         return obj.read_by_students.filter(user=currentUser).exists() | obj.read_by_staff.filter(user=currentUser).exists()
     
+    
+class SessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.SessionModel
+        fields = "__all__"
+        
+    def create(self, validated_data):
+        start_date = validated_data.get('start_date',datetime.datetime.now().date())
+        end_date = validated_data.get('end_date',None)
+        session = models.SessionModel.objects.create(start_date = start_date,end_date=end_date,is_active=True,**validated_data)
+        return session
     
     
 # Staff Serializers
@@ -283,6 +294,16 @@ class ResultSerializer(serializers.ModelSerializer):
         model = models.ResultModel
         fields = "__all__"
         
+    def create(self, validated_data):
+        attachments = []
+        if 'attachments' in validated_data:
+          attachments = validated_data.pop('attachments')
+        result = models.ResultModel.objects.create(**validated_data)
+        for attach in attachments:
+            attachment = models.Attachment.objects.create(fileName=attach,school = validated_data.get('school'),attachType='result')
+            result.attachments.add(attachment)
+        return result
+        
 class SyllabusSerializer(serializers.ModelSerializer):
     attachments = serializers.ListField(child=serializers.FileField(),required=False,write_only=True)
     class Meta:
@@ -312,6 +333,29 @@ class SyllabusListSerializer(serializers.ModelSerializer):
 
     def get_classroom_name(self,obj):
         return obj.classroom.class_name +' - '+ obj.classroom.section_name
+    
+class EventSerializer(serializers.ModelSerializer):
+    attachments = serializers.ListField(child=serializers.FileField(),required=False,write_only=True)
+    
+    class Meta:
+        model = models.EventModel
+        fields = "__all__"
+        
+    def create(self, validated_data):
+        attachments = []
+        if 'attachments' in validated_data:
+          attachments = validated_data.pop('attachments')
+        event = models.EventModel.objects.create(**validated_data)
+        for attach in attachments:
+            attachment = models.Attachment.objects.create(fileName=attach,school = validated_data.get('school'),attachType='events')
+            event.attachments.add(attachment)
+        return event
+    
+class EventListSerializer(serializers.ModelSerializer):
+    attachments = serializers.StringRelatedField(many=True)
+    class Meta:
+        model = models.EventModel
+        fields = "__all__"
         
 class TimeTableSerializer(serializers.ModelSerializer):
     class Meta:

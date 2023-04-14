@@ -8,6 +8,7 @@ router.register('staff', school_views.StaffView)
 router.register('classroom', school_views.ClassroomSchoolView)
 router.register('notice', school_views.NoticeView)
 router.register('staffAttendance', school_views.StaffAttendanceView)
+router.register('event', school_views.EventView)
 
 router2 = DefaultRouter()
 router2.register('classroom', staff_views.ClassroomStaffView)

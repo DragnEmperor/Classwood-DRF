@@ -258,6 +258,38 @@ class NoticeView(viewsets.ModelViewSet):
             return Response(data=response,status=status.HTTP_201_CREATED)
         return Response(data=serializer.errors,status=status.HTTP_200_OK)
     
+class EventView(viewsets.ModelViewSet):
+    serializer_class = serializers.EventSerializer
+    queryset = models.EventModel.objects.all()
+    permission_classes = [IsAuthenticated & (ReadOnlyStaffPermission | ReadOnlyStudentPermission |AdminPermission) & IsTokenValid]
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return serializers.EventListSerializer
+        return self.serializer_class
+    
+    def get_queryset(self):
+        user = self.request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+          school = (models.StaffModel.objects.get(user=user)).school
+        except models.StaffModel.DoesNotExist:
+          school = (models.StudentModel.objects.get(user=user)).school
+        return models.EventModel.objects.filter(school=school)
+    
+    def create(self, request):
+        data = request.data.copy()
+        user = request.user
+        school = models.SchoolModel.objects.get(user=user)
+        data['school'] = school 
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            response = {"message": "Event Created Successfully", "data": serializer.data}
+            return Response(data=response,status=status.HTTP_201_CREATED)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+    
 class StaffAttendanceView(viewsets.ModelViewSet):
     serializer_class = serializers.StaffAttendanceSerializer
     queryset = models.StaffAttendance.objects.all()
@@ -291,6 +323,48 @@ class StaffAttendanceView(viewsets.ModelViewSet):
             response = {"message": "Staff Attendance Marked Successfully", "data": serializer.data}
             return Response(data=response,status=status.HTTP_201_CREATED)
         return Response(data=serializer.errors,status=status.HTTP_200_OK)
+    
+class SessionView(viewsets.ModelViewSet):
+    serializer_class = serializers.SessionSerializer
+    queryset = models.SessionModel.objects.all()
+    permission_classes = [IsAuthenticated & AdminPermission & ReadOnlyStaffPermission & IsTokenValid]
+    
+    def create(self, request):
+        data = request.data.copy()
+        user = request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+          session = Session.objects.filter(school=school).order_by('-start_date').first()
+          if session and session.is_active:
+            return Response({'message': 'Session is already active.'})
+        except models.SchoolModel.DoesNotExist:
+          return Response(data={"message":"You are not a school admin"},status=status.HTTP_200_OK)
+        data['school'] = school
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            response = {"message": "Session Created Successfully", "data": serializer.data}
+            return Response(data=response,status=status.HTTP_201_CREATED)
+        return Response(data=serializer.errors,status=status.HTTP_200_OK)
+    
+    def partial_update(self, request):
+        user = request.user
+        try:
+          school = models.SchoolModel.objects.get(user=user)
+          session = Session.objects.filter(school=school).order_by('-start_date').first()
+          if not session or not session.is_active:
+            return Response({'message': 'No Active session found'})
+          serializer = self.get_serializer(session, data=request.data, partial=True)
+          serializer.is_active = False
+          session.end_date = datetime.now().date()
+          session.save()
+          return Response(serializers.SessionSerializer(session).data,status=status.HTTP_200_OK)
+        #   if(serializer.is_valid()):
+        #     self.perform_update(serializer)
+        #     return Response(serializer.data,status=status.HTTP_200_OK)
+        #   return Response(serializer.errors,status=status.HTTP_200_OK)
+        except models.SchoolModel.DoesNotExist:
+          return Response(data={"message":"You are not a school admin"},status=status.HTTP_200_OK)
     
     
     
