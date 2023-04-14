@@ -371,7 +371,20 @@ class TimeTableListSerializer(serializers.ModelSerializer):
        model = models.TimeTableModel
        fields = "__all__"
        
-    
+
+class CommonTimeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.CommonTimeModel
+        fields = "__all__"
+
+class CommonTimeListSerializer(serializers.ModelSerializer):
+    subject = serializers.StringRelatedField()
+    classroom = serializers.StringRelatedField()
+    school =  serializers.StringRelatedField()
+    class Meta:
+       model = models.CommonTimeModel
+       fields = "__all__"
+
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
     
