@@ -9,6 +9,9 @@ router.register('classroom', school_views.ClassroomSchoolView)
 router.register('notice', school_views.NoticeView)
 router.register('staffAttendance', school_views.StaffAttendanceView)
 router.register('event', school_views.EventView)
+router.register('session', school_views.SessionView)
+router.register('thoughtDay', school_views.ThoughtsView)
+router.register('fees', school_views.FeesDetailsView)
 
 router2 = DefaultRouter()
 router2.register('classroom', staff_views.ClassroomStaffView)
@@ -32,6 +35,7 @@ urlpatterns = [
     # path("staff/create",StaffCreateView.as_view(),name="staff_signup"),
     path("list/",include(router.urls),name="viewset_views_lists"),
     path("staff/me",staff_views.StaffSingleView.as_view(),name="staff_profile"),
+    path("staff/exam/mark/<uuid:pk>",staff_views.ExamMarkView.as_view(),name="mark_exam"),
     path("staff/",include(router2.urls),name="staff_classroom_list"),
     path('paytm-payment/', general_views.PaytmPaymentAPIView.as_view()),
     path('paytm-callback/', general_views.PaytmCallbackAPIView.as_view()),
@@ -40,4 +44,5 @@ urlpatterns = [
     path("student/subjects",student_views.StudentSubjectView.as_view(),name="student_subjects"),
     path("student/syllabus",student_views.StudentSyllabusView.as_view(),name="student_syllabus"),
     path("student/result",student_views.StudentResultView.as_view(),name="student_result"),
+    path("student/thoughtDay",student_views.ThoughtOfDayView.as_view(),name="thought_day"),
 ]

@@ -112,8 +112,9 @@ class SchoolModel(models.Model):
     #     return self.user.is_verified
     
 class SessionModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     start_date = models.DateField()
-    end_date = models.DateField()
+    end_date = models.DateField(null=True,blank=True)
     is_active = models.BooleanField(default=False)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
     
@@ -145,6 +146,7 @@ class StaffModel(models.Model):
 
     class Meta:
         ordering = ["date_of_joining", "first_name", "last_name"]
+        unique_together = ("first_name","last_name","mobile_number", "school", "session")
 
     @property
     def full_name(self):
@@ -204,7 +206,7 @@ class ClassroomModel(models.Model):
 
     class Meta:
         ordering = ["class_name","section_name"]
-        unique_together = ("class_name", "section_name", "school")
+        unique_together = ("class_name", "section_name", "school", "session")
 
     @property
     def strength(self):
@@ -236,7 +238,7 @@ class Subject(models.Model):
     class Meta:
         verbose_name = "Subject"
         verbose_name_plural = "Subjects"
-        unique_together = ("name","classroom")
+        unique_together = ("name","classroom","session")
         ordering = ["name"]
 
     def __str__(self):
@@ -249,7 +251,6 @@ class StudentModel(models.Model):
     user = models.OneToOneField(Accounts, on_delete=models.CASCADE, primary_key=True)
     profile_pic = models.ImageField(upload_to=student_profile_upload,null=True, blank=True)
     profile_pic_url = models.CharField(max_length=500, null=True, blank=True)
-    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
 
     # Personal Information
     first_name = models.CharField(max_length=50)
@@ -272,6 +273,9 @@ class StudentModel(models.Model):
     roll_no = models.CharField(max_length=20)
     admission_no = models.CharField(max_length=35)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
+    waiver_percent = models.DecimalField(decimal_places=5,max_digits=10,default=0)
+    waiver_type = models.CharField(max_length=20)
 
     # Class Information
     classroom = models.ForeignKey(
@@ -284,7 +288,7 @@ class StudentModel(models.Model):
         return self.roll_no
 
     class Meta:
-        unique_together = ("school", "roll_no","admission_no","classroom")
+        unique_together = ("school", "roll_no","admission_no","classroom","session")
         ordering = ["roll_no"]
 
     @property
@@ -334,7 +338,7 @@ class StudentAttendance(models.Model):
             models.Index(fields=["student", "date"]),
         ]
         ordering = ["-date"]
-        unique_together = ["student", "date"]
+        unique_together = ["student", "date",]
 
     def __str__(self):
         return self.student.user.email
@@ -394,16 +398,18 @@ class Attachment(models.Model):
 class FeesDetails(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    due_date = models.DateField()
-    description = models.TextField()
+    due_date = models.DateField(null=True,blank=True)
+    description = models.TextField(null=True,blank=True)
     for_class = models.ForeignKey(ClassroomModel, on_delete=models.CASCADE)
     session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
+    fee_type = models.TextField()
+    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
 
     class Meta:
         ordering = ["-due_date"]
 
     def __str__(self):
-        return f"{self.description} - {self.due_date}"
+        return f"{self.fee_type} - {self.amount}"
         
 class PaymentInfo(models.Model):
     PAYMENT_MODE = (
@@ -433,20 +439,22 @@ class ExamModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     school = models.ForeignKey("SchoolModel", on_delete=models.CASCADE)
     # Exam Information
+    tag = models.CharField(max_length=50)
     classroom = models.ForeignKey("ClassroomModel", on_delete=models.CASCADE)
     subject = models.ForeignKey('Subject', on_delete=models.CASCADE)
     max_marks = models.IntegerField(default=100)
     attachments = models.ManyToManyField('Attachment',blank=True)
-    tag = models.CharField(max_length=50)
+    description = models.CharField(max_length=200,null=True,blank=True)
     date_of_exam = models.DateField()
     session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
+    is_complete = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-date_of_exam"]
         unique_together = ("school", "classroom", "subject","date_of_exam")
 
     def __str__(self):
-        return f"{self.subject.name}_{self.tag}"
+        return self.tag
     
 class ResultModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -458,7 +466,7 @@ class ResultModel(models.Model):
 
     class Meta:
         ordering = ["-exam__date_of_exam"]
-        unique_together = ["student", "exam"]
+        unique_together = ["student", "exam","session"]
 
     def __str__(self):
         return self.student.full_name
@@ -475,7 +483,7 @@ class SyllabusModel(models.Model):
 
     class Meta:
         # ordering = ["-date_of_exam"]
-        unique_together = ("school", "classroom", "subject")
+        unique_together = ("school", "classroom", "subject","session")
 
     def __str__(self):
         return f"{self.subject.name}_{self.tag}"
@@ -491,7 +499,7 @@ class EventModel(models.Model):
     session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
     
     class Meta:
-        unique_together = ("school", "date","title")
+        unique_together = ("school", "date","title",)
     
     
 class TimeTableModel(models.Model):
@@ -518,17 +526,22 @@ class TimeTableModel(models.Model):
     
     
 class CommonTimeModel(models.Model):
- 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-
     school = models.ForeignKey("SchoolModel", on_delete=models.CASCADE)
     classroom = models.ForeignKey('ClassroomModel', related_name='commontime', on_delete=models.CASCADE)
     start_time = models.TimeField()
     end_time = models.TimeField()
     subject = models.CharField(max_length=128)
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
     
 class OTPModel(models.Model):
     email = models.EmailField()
     hashed_otp = models.CharField(max_length=128)
     expiration_time = models.DateTimeField()
+    
+class ThoughtDayModel(models.Model):
+    content = models.TextField()
+    date = models.DateField()
+    session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
+    school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
     

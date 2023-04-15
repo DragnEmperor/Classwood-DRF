@@ -147,11 +147,14 @@ class SessionSerializer(serializers.ModelSerializer):
         fields = "__all__"
         
     def create(self, validated_data):
-        start_date = validated_data.get('start_date',datetime.datetime.now().date())
         end_date = validated_data.get('end_date',None)
-        session = models.SessionModel.objects.create(start_date = start_date,end_date=end_date,is_active=True,**validated_data)
+        session = models.SessionModel.objects.create(start_date = validated_data.get('start_date'),end_date=end_date,is_active=validated_data.get('is_active',False),school = validated_data.get('school'))
         return session
-    
+
+class ThoughtDaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.ThoughtDayModel
+        fields = "__all__"
     
 # Staff Serializers
 class StaffListSerializer(serializers.ModelSerializer):
@@ -304,6 +307,16 @@ class ResultSerializer(serializers.ModelSerializer):
             result.attachments.add(attachment)
         return result
         
+class ResultListSerializer(serializers.ModelSerializer):
+    student_name = serializers.SerializerMethodField()
+    class Meta:
+        model = models.ResultModel
+        fields = "__all__"
+        
+    def get_student_name(self,obj):
+        return f'{obj.student.first_name} {obj.student.last_name}'
+
+
 class SyllabusSerializer(serializers.ModelSerializer):
     attachments = serializers.ListField(child=serializers.FileField(),required=False,write_only=True)
     class Meta:
@@ -393,12 +406,15 @@ class VerifyOTPSerializer(serializers.Serializer):
     otp = serializers.CharField(max_length=6)
     password = serializers.CharField(min_length=8,max_length=20)
     
-    
-# StudeNT Serializers
-class ResultListSerializer(serializers.ModelSerializer):
+class FeesDetailsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.ResultModel
-        fields="__all__"
+        model = models.FeesDetails
+        fields = "__all__"
+
+    
+    
+# Student Serializers
+    
          
 # class AuthTokenSerializer(serializers.Serializer):
 #     """
