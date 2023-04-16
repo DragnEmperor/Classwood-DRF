@@ -407,11 +407,18 @@ class VerifyOTPSerializer(serializers.Serializer):
     password = serializers.CharField(min_length=8,max_length=20)
     
 class FeesDetailsSerializer(serializers.ModelSerializer):
+    className = serializers.SerializerMethodField()
     class Meta:
         model = models.FeesDetails
         fields = "__all__"
+        
+    def get_className(self,obj):
+        return obj.for_class.class_name + ' - ' + obj.for_class.section_name
 
-    
+class FeeStudentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.FeesDetails
+        fields = "__all__"
     
 # Student Serializers
     

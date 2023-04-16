@@ -59,6 +59,10 @@ class EventAdmin(ModelAdmin):
 class FeesAdmin(ModelAdmin):
     list_display = ("for_class","amount","due_date","school")
     list_filter = ("for_class","session","school",)
+    
+class TimeTableAdmin(ModelAdmin):
+    list_display = ("classroom","school","session")
+    list_filter = ("classroom","school","session")
         
 admin.site.register(models.SchoolModel,SchoolAdmin)
 admin.site.register(models.StaffModel,StaffAdmin)
@@ -74,7 +78,7 @@ admin.site.register(models.Attachment)
 admin.site.register(models.SyllabusModel,SyllabusAdmin)
 admin.site.register(models.ExamModel,ExamAdmin)
 admin.site.register(models.ResultModel,ResultAdmin)
-admin.site.register(models.TimeTableModel)
+admin.site.register(models.TimeTableModel,TimeTableAdmin)
 admin.site.register(models.CommonTimeModel)
 admin.site.register(models.OTPModel)
 admin.site.register(models.EventModel,EventAdmin)

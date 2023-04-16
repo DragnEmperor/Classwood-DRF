@@ -88,4 +88,22 @@ class ThoughtOfDayView(generics.RetrieveAPIView):
     def get_object(self):
         date = self.request.GET.get('date',datetime.datetime.now().date())
         return models.ThoughtDayModel.objects.get(date=date)
+    
+class FeeStudentView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated & (StudentLevelPermission | AdminPermission | StaffLevelPermission) & IsTokenValid]
+    
+    def get(self, request):
+        student = models.StudentModel.objects.get(user=self.request.user)
+        classroom = student.classroom
+        fees = models.FeesDetails.objects.filter(for_class=classroom)
+        data = {}
+        data['fees'] = fees
+        total_amt = 0
+        for fee in fees:
+            total_amt = total_amt + fees.amount
+        data['total_amt'] = total_amt
+        discount = student.waiver_percent
+        data['amt_to_be_paid'] = total_amt - (total_amt * discount)
+        return Response(data=data)
+    
 

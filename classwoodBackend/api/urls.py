@@ -45,4 +45,5 @@ urlpatterns = [
     path("student/syllabus",student_views.StudentSyllabusView.as_view(),name="student_syllabus"),
     path("student/result",student_views.StudentResultView.as_view(),name="student_result"),
     path("student/thoughtDay",student_views.ThoughtOfDayView.as_view(),name="thought_day"),
+    path("student/fees",student_views.FeeStudentView.as_view(),name="single_student_fees"),
 ]

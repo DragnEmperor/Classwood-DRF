@@ -54,10 +54,10 @@ class ClassroomStaffView(viewsets.ReadOnlyModelViewSet):
         # classroom3 = models.ClassroomModel.objects.filter(id=teaches.classroom.id)
         # return classroom | classroom2 | classroom3
         session = self.request.GET.get('session',None)
-        if session is None:
-            session = models.SessionModel.objects.filter(school=school,is_active=True).order_by('-start_date').first()
         teacher = get_object_or_404(models.StaffModel,user=self.request.user)
         school = teacher.school
+        if session is None:
+            session = models.SessionModel.objects.filter(school=school,is_active=True).order_by('-start_date').first()
         if session is None:
             session = models.SessionModel.objects.filter(school=school,is_active=True).order_by('-start_date').first()
         classroom = models.ClassroomModel.objects.filter(Q(class_teacher=teacher) | Q(sub_class_teacher=teacher),session=session)
@@ -689,3 +689,5 @@ class SyllabusView(viewsets.ModelViewSet):
             response = {"message": "Syllabus Added Successfully", "data": serializer.data}
             return Response(data=response,status=status.HTTP_201_CREATED)
       return Response(data=serializer.errors,status=status.HTTP_200_OK)
+
+
