@@ -144,7 +144,13 @@ class StaffView(viewsets.ModelViewSet):
                data['mobile_number'] = row.get('Mobile',None)
                data['address'] = row.get('Address',None)
                data['account_no'] = row.get('Account_no',None)
-               data['date_of_joining'] = row.get('Date of Joining',None)
+               doj = row.get('Date of Joining',None)
+               try:
+                   doj = datetime.datetime.strptime(doj,'%Y-%m-%d')
+               except ValueError:
+                   doj = datetime.datetime.strptime(doj,'%d-%m-%Y')
+               doj = doj.strftime('%Y-%m-%d')
+               data['date_of_joining'] = doj
                school = models.SchoolModel.objects.get(user=request.user)
                if session is None:
                    session = models.SessionModel.objects.filter(school=school,is_active=True).order_by('-start_date').first()
@@ -374,9 +380,11 @@ class SessionView(viewsets.ModelViewSet):
         start_date = data.get('start_date',datetime.datetime.now().date())
         try:
           school = models.SchoolModel.objects.get(user=user)
-          session = models.SessionModel.objects.filter(school=school).order_by('-start_date').first()
-          if session and session.is_active:
-            return Response({'message': 'Session is already active.'})
+          sessions = models.SessionModel.objects.filter(school=school).order_by('-start_date').all()
+          if(len(sessions) >= 2):
+              session = sessions[1]
+              if session and session.is_active:
+                 return Response({'message': 'Two active sessions not allowed.'})
         except models.SchoolModel.DoesNotExist:
           return Response(data={"message":"You are not a school admin"},status=status.HTTP_200_OK)
         data['school'] = school

@@ -75,7 +75,7 @@ class SchoolModel(models.Model):
     SchoolSignUpModel model
     """
     
-    BOARD_CHOICE = (("ICSE", "ICSE"), ("CBSE", "CBSE"), ("HP", "HP"))
+    BOARD_CHOICE = (("ICSE", "ICSE"), ("CBSE", "CBSE"), ("HPBOSE", "HPBOSE"))
     user = models.OneToOneField(Accounts, on_delete=models.CASCADE,primary_key=True)
     school_name = models.CharField(max_length=100)
     school_phone = models.CharField(validators=[mobile_regex], max_length=13)
@@ -91,6 +91,7 @@ class SchoolModel(models.Model):
     student_limit = models.CharField(max_length=10,default=500)
     school_board = models.CharField(max_length=7,choices=BOARD_CHOICE, default="CBSE")
     school_affNo = models.CharField(max_length=30, default="1")
+    school_head = models.CharField(max_length=30,null=True,blank=True)
     
     
     def __str__(self):
@@ -143,6 +144,7 @@ class StaffModel(models.Model):
     date_of_joining = models.DateField()
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
     session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
+    staff_id = models.CharField(max_length=50, null=True, blank=True)
 
     class Meta:
         ordering = ["date_of_joining", "first_name", "last_name"]
@@ -275,7 +277,7 @@ class StudentModel(models.Model):
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
     session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
     waiver_percent = models.DecimalField(decimal_places=5,max_digits=10,default=0)
-    waiver_type = models.CharField(max_length=20)
+    waiver_type = models.CharField(max_length=30,default='none')
 
     # Class Information
     classroom = models.ForeignKey(

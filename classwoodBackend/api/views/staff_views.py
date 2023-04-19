@@ -9,9 +9,10 @@ from drf_spectacular.types import OpenApiTypes
 from .. import serializers
 from django.shortcuts import get_object_or_404
 from ..utils import generate_staff_user
-import csv
+import csv,datetime
 from rest_framework.parsers import MultiPartParser,FormParser,JSONParser
-from django.http import QueryDict
+from django.http import QueryDict,JsonResponse
+from django.forms.models import model_to_dict
 
 class StaffSingleView(generics.RetrieveUpdateAPIView):
     serializer_class = serializers.StaffListSerializer
@@ -94,16 +95,18 @@ class SubjectCreateView(viewsets.ModelViewSet):
         if session is None:
             session = models.SessionModel.objects.filter(school=school,is_active=True).order_by('-start_date').first()
         teacher = models.StaffModel.objects.filter(user=self.request.user,session=session).exists()
-        if not teacher and not get_classroom:
+        if not teacher and get_classroom is None:
             return models.Subject.objects.filter(school=school,session=session)
-        if get_classroom is not None:
+        if not teacher and get_classroom is not None:
             return models.Subject.objects.filter(classroom=get_classroom,school=school,session=session)
         teacher = models.StaffModel.objects.get(user=self.request.user,session=session)
-        classroom = models.ClassroomModel.objects.get(Q(class_teacher=teacher) | Q(sub_class_teacher=teacher),session=session)
-        if str(get_classroom) == str(classroom.id):
-            return models.Subject.objects.filter(classroom=classroom,school=school,session=session)
-        subjects = models.Subject.objects.filter(teacher=teacher,school=school,session=session)
-        return subjects
+        classrooms = models.ClassroomModel.objects.filter(Q(class_teacher=teacher) | Q(sub_class_teacher=teacher))
+        for classroom in classrooms:
+            if str(get_classroom) == str(classroom.id):
+               return models.Subject.objects.filter(classroom=classroom,school=school,session=session)
+        if get_classroom is not None:
+          return models.Subject.objects.filter(classroom=get_classroom,teacher=teacher,school=school,session=session)
+        return models.Subject.objects.filter(teacher=teacher,school=school,session=session)
 
     def get_serializer_class(self):
         if self.action=='list':
@@ -208,7 +211,13 @@ class StudentCreateView(viewsets.ModelViewSet):
                data['last_name'] = row.get('Last Name',None)
                data['father_name'] = row.get('Father Name',None)
                data['mother_name'] = row.get('Mother Name',None)
-               data['date_of_birth'] = row.get('DOB',None)
+               dob = row.get('DOB',None)
+               try:
+                   dob = datetime.datetime.strptime(dob,'%Y-%m-%d')
+               except ValueError:
+                   dob = datetime.datetime.strptime(dob,'%d-%m-%Y')
+               dob = dob.strftime('%Y-%m-%d')
+               data['date_of_birth'] = dob
                data['gender'] = '1' if row.get('Gender',None)=='M' else '2' if row.get('Gender',None)=='F' else '3'
                data['contact_email'] = row.get('Email',None)
                data['parent_mobile_number'] = row.get('Mobile',None)
@@ -216,7 +225,13 @@ class StudentCreateView(viewsets.ModelViewSet):
                data['roll_no'] = row.get('Roll No',None)
                data['admission_no'] = row.get('Admission No',None)
                data['parent_account_no'] = row.get('Account_no',None)
-               data['date_of_admission'] = row.get('Date of Admission',None)
+               doa = row.get('Date of Admission',None)
+               try:
+                   doa = datetime.datetime.strptime(doa,'%Y-%m-%d')
+               except ValueError:
+                   doa = datetime.datetime.strptime(doa,'%d-%m-%Y')
+               doa = doa.strftime('%Y-%m-%d')
+               data['date_of_admission'] = doa
                try:
                   if classroom is None:
                     className = row.get('Class',None)
@@ -388,9 +403,9 @@ class ExamMarkView(generics.UpdateAPIView):
 
     def patch(self,request,*args,**kwargs):
         exam = self.get_object()
-        exam.is_marked =  request.data.get('is_complete', exam.is_complete)
+        exam.is_complete =  request.data.get('is_complete', exam.is_complete)
         exam.save()
-        return exam
+        return JsonResponse(data={"exam":model_to_dict(exam),"message":"Exam Marked Successfully"},status=status.HTTP_200_OK)
 
 class ResultView(viewsets.ModelViewSet):
     serializer_class = serializers.ResultSerializer
@@ -407,7 +422,10 @@ class ResultView(viewsets.ModelViewSet):
         get_exam = self.request.GET.get('exam',None)
         session = self.request.GET.get('session',None)
         user = self.request.user
-        school = models.SchoolModel.objects.get(user=user)
+        try:
+            school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+            school = (models.StaffModel.objects.get(user=user)).school
         if session is None:
             session = models.SessionModel.objects.filter(school=school,is_active=True).order_by('-start_date').first()
         results = models.ResultModel.objects.filter(student__school = school,session=session)
@@ -499,7 +517,10 @@ class TimeTableView(viewsets.ModelViewSet):
         get_classroom = self.request.GET.get('classroom',None)
         session = self.request.GET.get('session',None)
         user = self.request.user
-        school = models.SchoolModel.objects.get(user=user)
+        try:
+            school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+            school = (models.StaffModel.objects.get(user=user)).school
         if session is None:
             session = models.SessionModel.objects.filter(school=school,is_active=True).order_by('-start_date').first()
         if get_classroom is None:
@@ -531,9 +552,9 @@ class TimeTableView(viewsets.ModelViewSet):
         for i in range(0,6):
             day_table={}
             errors=[]
-            print(i)
+            print('i',i)
             for j in range(0,len(timetable[i])):
-                print(j)
+                print('j',j)
                 # start_time = timeInfo[j]['start'].hour +":" + timeInfo[j]['start'].minute + ":00"
                 # end_time = timeInfo[j]['end'].hour +":" + timeInfo[j]['end'].minute + ":00"
                 if(timetable[i][j]['subject']['name'] != "No Subject Selected"):
@@ -544,6 +565,7 @@ class TimeTableView(viewsets.ModelViewSet):
                     day_table['teacher'] = timetable[i][j]['subject']['teacher_id']
                     day_table['school'] = data['school']
                     day_table['classroom'] = data['classroom']
+                    day_table['session'] = data['session']
                     serializer = self.serializer_class(data=day_table)
                     if serializer.is_valid():
                         serializer.save()
@@ -576,7 +598,10 @@ class CommonTimeView(viewsets.ModelViewSet):
         get_classroom = self.request.GET.get('classroom',None)
         session = self.request.GET.get('session',None)
         user = self.request.user
-        school = models.SchoolModel.objects.get(user=user)
+        try:
+            school = models.SchoolModel.objects.get(user=user)
+        except models.SchoolModel.DoesNotExist:
+            school = (models.StaffModel.objects.get(user=user)).school
         if session is None:
             session = models.SessionModel.objects.filter(school=school,is_active=True).order_by('-start_date').first()
         if get_classroom is None:
@@ -612,6 +637,7 @@ class CommonTimeView(viewsets.ModelViewSet):
                 day_table['subject'] = common[i]['subject']
                 day_table['school'] = data['school']
                 day_table['classroom'] = data['classroom']
+                day_table['session'] = data['session']
                 serializer = self.serializer_class(data=day_table)
                 if serializer.is_valid():
                     serializer.save()
