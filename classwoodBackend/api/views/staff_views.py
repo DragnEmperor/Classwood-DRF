@@ -225,6 +225,7 @@ class StudentCreateView(viewsets.ModelViewSet):
                data['roll_no'] = row.get('Roll No',None)
                data['admission_no'] = row.get('Admission No',None)
                data['parent_account_no'] = row.get('Account_no',None)
+               data['session'] = session
                doa = row.get('Date of Admission',None)
                try:
                    doa = datetime.datetime.strptime(doa,'%Y-%m-%d')

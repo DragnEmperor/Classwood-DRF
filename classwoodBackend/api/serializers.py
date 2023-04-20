@@ -92,18 +92,25 @@ class ClassroomListSerializer(serializers.ModelSerializer):
     
         
 class SubjectListSerializer(serializers.ModelSerializer):
-    classroom = serializers.StringRelatedField()
+    classroom_name = serializers.SerializerMethodField()
     teacher = serializers.SerializerMethodField(method_name='get_full_name')
     teacher_id = serializers.SerializerMethodField()
     class Meta:
         model = models.Subject
         fields = "__all__"
-    
+
     def get_full_name(self, obj):
+        if obj.teacher is None:
+            return 'not assigned'
         return obj.teacher.full_name
-    
+
     def get_teacher_id(self,obj):
+        if obj.teacher is None:
+            return 'not assigned'
         return obj.teacher.user.id
+
+    def get_classroom_name(self,obj):
+        return f"{obj.classroom.class_name}-{obj.classroom.section_name}"
     
 # class AttachmentSerializer(serializers.ModelSerializer):
 #     fileName = serializers.FileField()
@@ -164,6 +171,7 @@ class StaffListSerializer(serializers.ModelSerializer):
     gender = serializers.SerializerMethodField()
     total_attendance = serializers.SerializerMethodField()
     month_attendance = serializers.SerializerMethodField()
+    year_attendance = serializers.SerializerMethodField()
     
     class Meta:
         model = models.StaffModel
@@ -177,6 +185,9 @@ class StaffListSerializer(serializers.ModelSerializer):
     
     def get_month_attendance(self, obj):
         return str(obj.get_month_attendance)
+    
+    def get_year_attendance(self, obj):
+        return str(obj.get_year_attendance)
     
     
 class SubjectCreateSerializer(serializers.ModelSerializer):
@@ -211,6 +222,7 @@ class StudentListSerializer(serializers.ModelSerializer):
     total_attendance = serializers.SerializerMethodField()
     month_attendance = serializers.SerializerMethodField()
     gender = serializers.SerializerMethodField()
+    year_attendance = serializers.SerializerMethodField()
     
     class Meta:
         model = models.StudentModel
@@ -224,6 +236,9 @@ class StudentListSerializer(serializers.ModelSerializer):
     
     def get_gender(self, obj):
         return obj.get_gender_display
+    
+    def get_year_attendance(self, obj):
+        return str(obj.get_year_attendance)
     
 class StudentAttendanceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -414,11 +429,6 @@ class FeesDetailsSerializer(serializers.ModelSerializer):
         
     def get_className(self,obj):
         return obj.for_class.class_name + ' - ' + obj.for_class.section_name
-
-class FeeStudentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.FeesDetails
-        fields = "__all__"
     
 # Student Serializers
     

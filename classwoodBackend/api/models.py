@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.conf import settings
 from calendar import monthrange
 import json,os,datetime
+from rest_framework import serializers
 
 def school_logo_upload(instance, filename):
     ext = filename.split(".")[-1]
@@ -45,6 +46,11 @@ def notice_attach_upload(instance, filename):
     generated_name = f"schools/{instance.school.school_name}/{instance.attachType}/{file_title}_{uuid4().hex}.{ext}"
     return generated_name
 
+
+class YearAttendanceSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    present = serializers.BooleanField()
+        
 # ACCOUNTS, AUTH RELATED MODELS
 class Accounts(AbstractBaseUser, PermissionsMixin):
     """
@@ -68,13 +74,13 @@ class BlackListedToken(models.Model):
 
     class Meta:
         unique_together = ("token", "user")
-        
-# SCHOOL SIGNUP RELATED MODELS    
+
+# SCHOOL SIGNUP RELATED MODELS
 class SchoolModel(models.Model):
     """
     SchoolSignUpModel model
     """
-    
+
     BOARD_CHOICE = (("ICSE", "ICSE"), ("CBSE", "CBSE"), ("HPBOSE", "HPBOSE"))
     user = models.OneToOneField(Accounts, on_delete=models.CASCADE,primary_key=True)
     school_name = models.CharField(max_length=100)
@@ -92,34 +98,40 @@ class SchoolModel(models.Model):
     school_board = models.CharField(max_length=7,choices=BOARD_CHOICE, default="CBSE")
     school_affNo = models.CharField(max_length=30, default="1")
     school_head = models.CharField(max_length=30,null=True,blank=True)
-    
-    
+
+
     def __str__(self):
         return self.school_name
-    
+
     def create(self, validated_data):
         return SchoolModel.objects.create(**validated_data)
-    
+
     @property
     def staff_strength(self):
         return StaffModel.objects.all().count()
-    
+
     @property
     def student_strength(self):
         return StudentModel.objects.all().count()
-    
+
     # @property
     # def is_verified(self):
     #     return self.user.is_verified
-    
+
 class SessionModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     start_date = models.DateField()
     end_date = models.DateField(null=True,blank=True)
     is_active = models.BooleanField(default=False)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
-    
-    
+
+    @property
+    def deactivate_if_expired(self):
+        if self.end_date and self.end_date == self.start_date:
+            self.is_active = False
+            self.save()
+
+
 class StaffModel(models.Model):
     GENDER_CHOICE = (("1", "Male"), ("2", "Female"), ("3", "Other"))
 
@@ -157,28 +169,28 @@ class StaffModel(models.Model):
     @property
     def incharge_of(self):
         return ClassroomModel.objects.get(class_teacher=self.user.id)
-    
+
     @property
     def sub_incharge_of(self):
         return ClassroomModel.objects.filter(sub_class_teacher=self.user.id)
 
     def __str__(self):
         return self.user.email
-    
+
     @property
     def get_gender_display(self):
         for choice in self.GENDER_CHOICE:
             if choice[0] == self.gender:
                 return choice[1]
         return None
-    
+
     @property
     def get_attendance(self):
         att = StaffAttendance.objects.filter(staff=self.user.id).values("present")
         if not att:
             return 100
         return att.filter(present=True).count() / att.count() * 100
-    
+
     @property
     def get_month_attendance(self):
         att_lst = [
@@ -192,7 +204,31 @@ class StaffModel(models.Model):
 
         return json.dumps(att_lst)
     
-# CLASSROOM RELATED MODELS 
+    @property
+    def get_year_attendance(self):
+       year = timezone.now().year
+       att_lst = []
+       for month in range(1, 13):
+          days_in_month = monthrange(year, month)[1]
+          month_attendance = [
+            {'date': datetime.date(year, month, day).strftime('%Y-%m-%d'), 'present': False}
+            for day in range(1, days_in_month+1)
+          ]
+          att = StaffAttendance.objects.filter(
+            staff=self.user.id,
+            date__year=year,
+            date__month=month
+          )
+          serializer = YearAttendanceSerializer(att, many=True)
+          for i in serializer.data:
+            day = int(i['date'].split('-')[2])
+            month_attendance[day-1]['present'] = i['present']
+          att_lst.append({'month': month, 'attendance_records': month_attendance})
+       return att_lst
+    
+    
+
+# CLASSROOM RELATED MODELS
 class ClassroomModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
@@ -216,15 +252,15 @@ class ClassroomModel(models.Model):
 
     def __str__(self):
         return f"{self.class_name}-{self.section_name}"
-    
+
     @property
     def no_of_subjects(self):
         return Subject.objects.filter(classroom=self.id).count()
-    
+
     @property
     def no_of_teachers(self):
         return  self.teachers.all().count()
-    
+
 
 # add, if required, code for setting onDelete to models.SET() to class teacher
 class Subject(models.Model):
@@ -245,7 +281,7 @@ class Subject(models.Model):
 
     def __str__(self):
         return f'{self.name}'
-    
+
 
 class StudentModel(models.Model):
     GENDER_CHOICE = (("1", "Male"), ("2", "Female"), ("3", "Other"))
@@ -268,7 +304,7 @@ class StudentModel(models.Model):
     parent_mobile_number = models.CharField(
         validators=[mobile_regex], max_length=13, blank=True
     )
-    parent_account_no = models.CharField(max_length=100)
+    parent_account_no = models.CharField(max_length=100,null=True,blank=True)
 
     # School Information
     date_of_admission = models.DateField()
@@ -284,7 +320,7 @@ class StudentModel(models.Model):
         ClassroomModel, on_delete=models.SET_NULL, verbose_name="Class",null=True
     )
     subjects = models.ManyToManyField(Subject, related_name="learning_subjects", blank=True)
-    
+
 
     def __str__(self):
         return self.roll_no
@@ -296,14 +332,14 @@ class StudentModel(models.Model):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
-    
+
     @property
     def get_attendance(self):
         att = StudentAttendance.objects.filter(student=self.user.id).values("present")
         if not att:
             return 100
         return att.filter(present=True).count() / att.count() * 100
-    
+
     @property
     def get_month_attendance(self):
         att_lst = [
@@ -315,16 +351,72 @@ class StudentModel(models.Model):
         for i in att:
             att_lst[i.date.day - 1] = 2 if i.present else 1
 
-        return json.dumps(att_lst) 
+        return json.dumps(att_lst)
     
+    @property
+    def get_year_attendance(self):
+       year = timezone.now().year
+       att_lst = []
+       for month in range(1, 13):
+          days_in_month = monthrange(year, month)[1]
+          month_attendance = [
+            {'date': datetime.date(year, month, day).strftime('%Y-%m-%d'), 'present': False}
+            for day in range(1, days_in_month+1)
+          ]
+          att = StudentAttendance.objects.filter(
+            student=self.user.id,
+            date__year=year,
+            date__month=month
+          )
+          serializer = YearAttendanceSerializer(att, many=True)
+          for i in serializer.data:
+            day = int(i['date'].split('-')[2])
+            month_attendance[day-1]['present'] = i['present']
+          att_lst.append({'month': month, 'attendance_records': month_attendance})
+       return att_lst
+
     @property
     def get_gender_display(self):
         for choice in self.GENDER_CHOICE:
             if choice[0] == self.gender:
                 return choice[1]
         return None
-    
+
 # ATTENDANCE RELATED MODEL
+class StudentYearAttendance(models.Model):
+    student = models.ForeignKey(StudentModel, on_delete=models.CASCADE)
+    year = models.IntegerField()
+    attendance_data = models.JSONField()
+
+    class Meta:
+        verbose_name = "StudentYearAttendance"
+        verbose_name_plural = "StudentYearAttendance"
+        indexes = [
+            models.Index(fields=["student", "year"]),
+        ]
+        unique_together = ["student", "year"]
+
+    def __str__(self):
+        return f"{self.student.user.email} ({self.year})"
+    
+    
+class StaffYearAttendance(models.Model):
+    staff = models.ForeignKey(StaffModel, on_delete=models.CASCADE)
+    year = models.IntegerField()
+    attendance_data = models.JSONField()
+
+    class Meta:
+        verbose_name = "StaffYearAttendance"
+        verbose_name_plural = "StaffYearAttendance"
+        indexes = [
+            models.Index(fields=["staff", "year"]),
+        ]
+        unique_together = ["staff", "year"]
+
+    def __str__(self):
+        return f"{self.staff.user.email} ({self.year})"
+    
+    
 class StudentAttendance(models.Model):
     student = models.ForeignKey(StudentModel, on_delete=models.CASCADE)
     date = models.DateField(default=datetime.date.today)
@@ -345,6 +437,23 @@ class StudentAttendance(models.Model):
     def __str__(self):
         return self.student.user.email
     
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        year = self.date.year
+        try:
+            year_attendance = StudentYearAttendance.objects.get(
+                student=self.student,
+                year=year
+            )
+        except StudentYearAttendance.DoesNotExist:
+            year_attendance = StudentYearAttendance(
+                student=self.student,
+                year=year,
+                attendance_data=[]
+            )
+        year_attendance.attendance_data = json.loads(self.student.get_year_attendance)
+        year_attendance.save()
+
 class StaffAttendance(models.Model):
     staff = models.ForeignKey(StaffModel, on_delete=models.CASCADE)
     date = models.DateField(default=timezone.now)
@@ -363,8 +472,25 @@ class StaffAttendance(models.Model):
 
     def __str__(self):
         return self.student.user.email
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        year = self.date.year
+        try:
+            year_attendance = StaffYearAttendance.objects.get(
+                staff=self.staff,
+                year=year
+            )
+        except StaffYearAttendance.DoesNotExist:
+            year_attendance = StaffYearAttendance(
+                staff=self.staff,
+                year=year,
+                attendance_data=[]
+            )
+        year_attendance.attendance_data = json.loads(self.staff.get_year_attendance)
+        year_attendance.save()
 
-# NOTICE RELATED MODELS 
+# NOTICE RELATED MODELS
 class Notice(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
@@ -379,11 +505,11 @@ class Notice(models.Model):
     class Meta:
         ordering = ["-date_posted"]
         unique_together = ("school", "title",'date_posted')
-        
+
     @classmethod
-    def read_status(cls,notice,currentUser): 
+    def read_status(cls,notice,currentUser):
         return notice.read_by_students.filter(id=currentUser).exists() | notice.read_by_staff.filter(id=currentUser).exists()
-     
+
     def __str__(self):
         return self.title
 
@@ -391,12 +517,12 @@ class Attachment(models.Model):
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
     attachType = models.CharField(max_length=50, null=True, blank=True)
     fileName = models.FileField(upload_to=notice_attach_upload, null=True, blank=True)
-    
+
     def __str__(self):
         return self.fileName.url
-    
-    
-#PAYMENT RELATED MODELS 
+
+
+#PAYMENT RELATED MODELS
 class FeesDetails(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -412,7 +538,7 @@ class FeesDetails(models.Model):
 
     def __str__(self):
         return f"{self.fee_type} - {self.amount}"
-        
+
 class PaymentInfo(models.Model):
     PAYMENT_MODE = (
         ("1", "Cheque"),
@@ -435,7 +561,7 @@ class PaymentInfo(models.Model):
         ordering = ["-payment_date"]
         verbose_name = "Payment"
         verbose_name_plural = "Payments"
-        
+
 # EXAM RELATED MODELS
 class ExamModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -457,7 +583,7 @@ class ExamModel(models.Model):
 
     def __str__(self):
         return self.tag
-    
+
 class ResultModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     student = models.ForeignKey("StudentModel", on_delete=models.CASCADE)
@@ -472,8 +598,8 @@ class ResultModel(models.Model):
 
     def __str__(self):
         return self.student.full_name
-    
-    
+
+
 class SyllabusModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     school = models.ForeignKey("SchoolModel", on_delete=models.CASCADE)
@@ -489,7 +615,7 @@ class SyllabusModel(models.Model):
 
     def __str__(self):
         return f"{self.subject.name}_{self.tag}"
-    
+
 class EventModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     school = models.ForeignKey("SchoolModel", on_delete=models.CASCADE)
@@ -499,11 +625,11 @@ class EventModel(models.Model):
     title = models.CharField(max_length=50)
     description = models.TextField()
     session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
-    
+
     class Meta:
         unique_together = ("school", "date","title",)
-    
-    
+
+
 class TimeTableModel(models.Model):
     # id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     DAYS_OF_WEEK = (
@@ -525,8 +651,8 @@ class TimeTableModel(models.Model):
     subject = models.ForeignKey('Subject', on_delete=models.SET_NULL, null=True, blank=True)
     teacher = models.ForeignKey('StaffModel', on_delete=models.SET_NULL, null=True, blank=True)
     session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
-    
-    
+
+
 class CommonTimeModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     school = models.ForeignKey("SchoolModel", on_delete=models.CASCADE)
@@ -535,15 +661,15 @@ class CommonTimeModel(models.Model):
     end_time = models.TimeField()
     subject = models.CharField(max_length=128)
     session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
-    
+
 class OTPModel(models.Model):
     email = models.EmailField()
     hashed_otp = models.CharField(max_length=128)
     expiration_time = models.DateTimeField()
-    
+
 class ThoughtDayModel(models.Model):
     content = models.TextField()
     date = models.DateField()
     session = models.ForeignKey(SessionModel, on_delete=models.CASCADE)
     school = models.ForeignKey(SchoolModel, on_delete=models.CASCADE)
-    
+

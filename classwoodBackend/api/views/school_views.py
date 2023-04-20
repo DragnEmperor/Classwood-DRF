@@ -372,6 +372,9 @@ class SessionView(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         school = models.SchoolModel.objects.get(user=user)
+        active_sessions = models.SessionModel.objects.filter(school_id=school,is_active=True).order_by('-start_date').all()
+        for session in active_sessions:
+            session.deactivate_if_expired
         return models.SessionModel.objects.filter(school=school)
 
     def create(self, request):
@@ -384,7 +387,7 @@ class SessionView(viewsets.ModelViewSet):
           if(len(sessions) >= 2):
               session = sessions[1]
               if session and session.is_active:
-                 return Response({'message': 'Two active sessions not allowed.'})
+                 return Response({'message': 'More than Two active sessions not allowed.'})
         except models.SchoolModel.DoesNotExist:
           return Response(data={"message":"You are not a school admin"},status=status.HTTP_200_OK)
         data['school'] = school
