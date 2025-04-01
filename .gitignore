@@ -5,7 +5,6 @@
 __pycache__
 *.sqlite3
 media
-migrations
 
 # Backup files
 *.bak 
@@ -65,3 +64,4 @@ build/
 # Coverage Test Reports
 .coverage
 htmlcov
+.venv

@@ -1,0 +1,20 @@
+target-version = "py313"
+line-length = 120
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "DJ",  # flake8-django
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "DJ001", # null=True on string fields — existing schema, intentional
+]
+
+[lint.isort]
+known-first-party = ["api", "classwoodBackend"]

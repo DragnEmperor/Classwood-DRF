@@ -1,4 +1,2 @@
 -r base.txt
-# Testing Tools
-black==22.3.0
-isort==5.10.1
+ruff>=0.8.0

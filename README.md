@@ -1,173 +1,228 @@
-<p align="center">
-  <a href="https://github.com/AvishrantsSh/Django-Template">
-    <img src="assets/logo.png" alt="Logo" width="480">
-  </a>
+# Classwood Backend
 
-  <h2 align="center">Django Template</h2>
+Classwood Backend is a Django REST Framework API for the Classwood school management application. It powers school-admin, staff, and student workflows including authentication, classrooms, staff and student records, attendance, timetable management, exams, syllabus, notices, events, and fee tracking.
 
-  <p align="center">
-    An awesome way to kickstart your Django projects!
-    <br>
-    <a href="https://github.com/AvishrantsSh/Django-Template/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/AvishrantsSh/Django-Template/issues">Request Feature</a>
-  </p>
-</p>
-<br>
-<p align="center">
-  <a href="https://github.com/AvishrantsSh/Django-Template/graphs/contributors">
-    <img alt="Contributors" src="https://img.shields.io/github/contributors/AvishrantsSh/Django-Template.svg?style=for-the-badge" style="max-width:100%;">
-  </a>
-  <a href="https://github.com/AvishrantsSh/Django-Template/network/members">
-    <img alt="Forks" src="https://img.shields.io/github/forks/AvishrantsSh/Django-Template.svg?style=for-the-badge" style="max-width:100%;">
-  </a>
-  <a  href="https://github.com/AvishrantsSh/Django-Template/stargazers">
-    <img alt="Stargazers" src="https://img.shields.io/github/stars/AvishrantsSh/Django-Template.svg?style=for-the-badge" style="max-width:100%;">
-  </a>
-  <a href="https://github.com/AvishrantsSh/Django-Template/issues">
-    <img alt="Issues" src="https://img.shields.io/github/issues/AvishrantsSh/Django-Template.svg?style=for-the-badge" style="max-width:100%;">
-  </a>
-  <a href="https://github.com/AvishrantsSh/Django-Template/blob/main/LICENSE">
-    <img alt="MaIT License" src="https://img.shields.io/github/license/AvishrantsSh/Django-Template.svg?style=for-the-badge" style="max-width:100%;">
-  </a>
-</p>
+## Tech Stack
 
-<br>
-<!-- TABLE OF CONTENTS -->
+- Python with Django 5.2
+- Django REST Framework
+- SimpleJWT for token authentication
+- drf-spectacular for OpenAPI schema generation
+- django-cors-headers for frontend integration
+- SQLite by default for local development
+- pyotp and email delivery for password reset OTP flows
 
-## Table of Contents
-<ol>
-  <li>
-    <a href="#about-the-project">About The Project</a>
-  </li>
-  <li>
-    <a href="#getting-started">Getting Started</a>
-    <ul>
-      <li><a href="#prerequisites">Prerequisites</a></li>
-      <li><a href="#installation">Installation</a></li>
-    </ul>
-  </li>
-  <li><a href="#usage">Usage</a></li>
-  <li><a href="#contributing">Contributing</a></li>
-  <li><a href="#license">License</a></li>
-</ol>
+## Main Capabilities
 
+- School registration, login, logout, JWT refresh, forgot-password OTP, and password reset
+- School profile management
+- Staff CRUD, staff CSV import, and staff attendance
+- Student CRUD, student CSV import, and student attendance
+- Classroom creation with class teacher and subject assignments
+- Subject, syllabus, timetable, and common-period management
+- Exam creation, result upload, manual marks entry, and CSV result import
+- Notices, events, sessions, and thought-of-the-day content
+- Fee setup, student fee visibility, payment history, and fee summaries
+- Role-aware API access for school admins, staff, and students
 
+## Project Structure
 
-<!-- ABOUT THE PROJECT -->
-## About The Project
+```text
+Classwood-DRF/
+├── classwoodBackend/
+│   ├── manage.py
+│   ├── classwoodBackend/
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   ├── asgi.py
+│   │   └── wsgi.py
+│   └── api/
+│       ├── models/
+│       ├── serializers/
+│       ├── views/
+│       ├── urls.py
+│       ├── permissions.py
+│       ├── pagination.py
+│       ├── services.py
+│       ├── utils.py
+│       ├── validators.py
+│       └── manager.py
+├── etc/
+│   ├── base.txt
+│   ├── dev.txt
+│   └── env.txt
+└── README.md
+```
 
-Managing your Django project and all its dependencies can be a nightmare. This also includes managing dependencies in virtual environments, securing your `SECRET KEY`, adding files to `.gitignore`, running code style validations and what not.
+## Setup
 
-Why not simplify this tedious and repetetive work? 
+1. Create and activate a virtual environment:
 
-With this objective in mind, I created `Django Template`, a simple and minimalistic django project template that fits all your requirements. 
+```bash
+cd Classwood-DRF
+python -m venv .venv
+source .venv/bin/activate
+```
 
+2. Install dependencies:
 
-<!-- GETTING STARTED -->
-## Getting Started
+```bash
+pip install -r etc/base.txt
+```
 
-Simply click on [Use this template](https://github.com/AvishrantsSh/Django-Template/generate) button on top to get started. Go ahead and choose a cool name for your project. Clone the newly created repository and continue with the following steps.
+3. Create `.env` in the `Classwood-DRF` directory. Use `etc/env.txt` as the starting point:
 
-### Prerequisites
+```env
+DJANGO_SECRET_KEY=replace-with-a-local-secret
+DEVELOPMENT=True
+ALLOWED_HOSTS=127.0.0.1,localhost
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+CORS_ALLOW_CREDENTIALS=True
+DEFAULT_PAGE_SIZE=5
+THROTTLE_ANON=30/min
+THROTTLE_USER=120/min
+THROTTLE_LOGIN=5/min
+EMAIL_USE_TLS=True
+EMAIL_HOST=smtp.gmail.com
+EMAIL_HOST_USER=you@example.com
+EMAIL_HOST_PASSWORD=app-password
+EMAIL_PORT=587
+LOG_LEVEL=INFO
+```
 
-This project is optimized to run on Linux Environments. Tests for Windows and Mac are still in progress.
+4. Run migrations:
 
-### Installation
+```bash
+cd classwoodBackend
+python manage.py migrate
+```
 
-After getting a local copy on your system, run the following commands based on your role.
+5. Start the API:
 
-- ### Making a new Django Project
-    If you are a developer who is just starting with a new project, simply run
-    ```sh
-    make project
-    ```
-    A prompt will ask you to enter a valid project name before continuing. This command will setup your virtual environment, secret keys and all the basic dependencies required by a django project.
+```bash
+python manage.py runserver
+```
 
-    
-    
-    _Note: While developing, it is advisable to enter your **virtual environment** for proper configuration and better control. To enter a virtual environment, use_
-    ```sh
-    . bin/activate
-    ```
+The API is served at `http://127.0.0.1:8000/api/`.
 
-    _To deactivate the environment, simply use `deactivate` command_
-    ```
-    deactivate
-    ```
-    ___
-    Alternatively, if you prefer a finer control over your project creation,you can use the following commands
-    - Install all project dependencies and create virtual environment
-        ```sh
-        make install
-        ```
+## Useful Commands
 
-    - Make django project using `django-admin`
-        ```sh
-        django-admin startproject --template=./etc/structure ${project-name} .
-        ```
+From `Classwood-DRF/classwoodBackend`:
 
-      Replace `${project-name}` with the name of Django project as per your wish. Also, you can customize the template for your project,according to your need.
+```bash
+python manage.py check
+python manage.py makemigrations
+python manage.py migrate
+python manage.py runserver
+```
 
-    _Note: This directory will now function as your root django folder. Upon creation of a project, a folder named `${project-name}` and `manage.py` will appear at the root._
-  ___
+From `Classwood-DRF` when using the checked-in virtual environment path:
 
-- ### Running an existing Django Project
-    If the repository already contains a django project, you can simply install the requirements and run the project.
+```bash
+.venv/bin/python classwoodBackend/manage.py check
+```
 
-    To install all the dependencies, use
-    ```sh
-    make install
-    ```
+## Pagination
 
-<!-- USAGE EXAMPLES -->
-## Usage
+List endpoints use DRF page-number pagination.
 
-You can use `make` commands to perform various operations on your django project.
-1. Start django server on port `8000`. You can customize it by editing `PORT` in `Makefile`. 
-    ```sh
-    make run
-    ```
+Default response shape:
 
-2. Apply database migrations
-    ```sh
-    make migrate
-    ```
+```json
+{
+  "count": 42,
+  "next": "http://127.0.0.1:8000/api/list/classroom/?page=2&page_size=12",
+  "previous": null,
+  "results": []
+}
+```
 
-3. Clear database records.
-    ```sh
-    make flush
-    ```
-     _Note: Media files will not be deleted using this command_
+Supported query params:
 
-4. Update project requirements (useful for deployment)
-    ```sh
-    make freeze
-    ```
-   This command will add all your project dependencies to `etc/requirements.txt`, making it very easy for deployment.
+- `page`: one-based page number
+- `page_size`: number of rows requested by the frontend
 
-5. Running Django Testcases
-    ```sh
-    make test
-    ```
+The default page size is controlled by `DEFAULT_PAGE_SIZE` and falls back to `5`. The maximum `page_size` is `100`.
 
-5. Check for proper formatting and import style using `black` and `isort`
-    ```sh
-    make format
-    ```
+## API Overview
 
-<!-- CONTRIBUTING -->
-## Contributing
+### Authentication
 
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/api/signup/` | Register a school account |
+| POST | `/api/login/` | Login and return JWT tokens |
+| POST | `/api/logout/` | Logout and blacklist refresh token |
+| POST | `/api/refresh-token/` | Refresh JWT access token |
+| POST | `/api/forgot-password/` | Send password reset OTP |
+| POST | `/api/verify-otp/` | Verify OTP and reset password |
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### School Admin
 
-<!-- LICENSE -->
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET/PATCH | `/api/account/` | School profile |
+| CRUD | `/api/list/staff/` | Staff records |
+| CRUD | `/api/list/classroom/` | Classroom records |
+| GET | `/api/list/student/` | All students in the school |
+| CRUD | `/api/list/notice/` | Notices |
+| CRUD | `/api/list/event/` | Events |
+| CRUD | `/api/list/session/` | Academic sessions |
+| CRUD | `/api/list/staffAttendance/` | Staff attendance |
+| CRUD | `/api/list/thoughtDay/` | Thought of the day |
+| CRUD | `/api/list/fees/` | Fee definitions and fee summary |
+| GET/POST | `/api/list/payments/` | Payment history and payment records |
+
+### Staff
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET/PATCH | `/api/staff/me/` | Staff profile |
+| CRUD | `/api/staff/classroom/` | Assigned classrooms |
+| CRUD | `/api/staff/subject/` | Subjects |
+| CRUD | `/api/staff/student/` | Students |
+| CRUD | `/api/staff/studentAttendance/` | Student attendance |
+| CRUD | `/api/staff/exam/` | Exams and tests |
+| CRUD | `/api/staff/result/` | Exam results |
+| CRUD | `/api/staff/syllabus/` | Syllabus uploads |
+| CRUD | `/api/staff/timeTable/` | Day-wise timetable periods |
+| CRUD | `/api/staff/commontime/` | Common periods such as recess or breaks |
+| PUT | `/api/staff/exam/mark/<uuid>` | Mark an exam as complete |
+
+### Student
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET/PATCH | `/api/student/me/` | Student profile |
+| GET | `/api/student/subjects/` | Student subjects |
+| GET | `/api/student/syllabus/` | Student syllabus |
+| GET | `/api/student/result/` | Student results |
+| GET | `/api/student/thoughtDay/` | Thought of the day |
+| GET | `/api/student/fees/` | Student fee summary and payments |
+
+## Frontend Integration
+
+The Next.js frontend should call the backend through its proxy route:
+
+```text
+/api/backend/<backend-path>
+```
+
+Example:
+
+```text
+/api/backend/list/classroom/?page=1&page_size=12
+```
+
+Authenticated browser requests rely on the frontend proxy attaching the server-side access token from cookies. Direct browser calls to `http://127.0.0.1:8000/api/...` are useful for debugging only when the `Authorization: Bearer <token>` header is supplied manually.
+
+## Development Notes
+
+- Keep paginated list views paginated. Use `count` for totals instead of fetching every page.
+- Use a bounded `page_size` for selector data such as class or subject dropdowns.
+- Add backend aggregate endpoints when the UI needs exact cross-page metrics, such as total present students for a day.
+- File uploads use multipart form data for CSV, profile images, notices, and syllabus attachments.
+
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+See [LICENSE](LICENSE).
